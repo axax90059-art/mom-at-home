@@ -87,6 +87,7 @@
 <script src="m_gd.js"></script>
 <script src="m_lin.js"></script>
 <script src="m_panda.js"></script>
+<script src="m_dad.js"></script>
 <script src="m_parrot.js"></script>
 <script src="m_tiger.js"></script>
 <script src="m_poodle.js"></script>
@@ -116,10 +117,17 @@
     <button class="in2" data-k="pet">摸摸小狗</button>
     <button class="in2" data-k="feed">餵小狗</button>
     <button class="in2" data-f="dogplay">孫女和小狗玩</button>
+    <button class="in2" data-f="holdhands">爸爸牽媽媽的手</button>
+    <button class="in2" data-pet="tiger">摸摸白虎</button>
+    <button class="in2" data-pet="poodle">抱抱貴賓</button>
+    <button class="in2" data-pet="parrot">玄鳳站我肩上</button>
+    <button class="in2" data-pet="panda">抱抱熊貓</button>
+    <button class="in2" data-pet="all">動物一起玩</button>
     <button class="in2" data-p2="1">孫女也來玩（方向鍵）</button>
     <button class="in2" data-play="gd">換孫女來玩</button>
     <button class="in2" data-play="sil">換女婿來玩</button>
     <button class="in2" data-play="lin">換阿姨來玩</button>
+    <button class="in2" data-play="dad">換爸爸來玩</button>
     <button class="in2" data-play="me">換回寶貝</button>
     <button class="in2" data-k="bath">我要洗澡</button>
     <button class="in2" data-k="sleep">我要睡覺</button>
@@ -638,6 +646,7 @@ function targetPose(t){
     case 'call':
       set('RightArm',[0,0,-1.9]);set('RightForeArm',[0,0,-.4+.35*Math.sin(t*7.5)]);set('Head',[0,0,-.1]);break;
   }
+  if(window.holdOn&&!['call','phone','hug','pat','sleep','bath'].includes(cur.name)){const _L=window.holdHand==='Left';T[_L?'mixamorigLeftArm':'mixamorigRightArm']=[-.18,0,_L?.7:-.7];T[_L?'mixamorigLeftForeArm':'mixamorigRightForeArm']=[-.28,0,0]}
   return T;
 }
 function updatePose(dt,t){
@@ -869,7 +878,7 @@ function updateDog(dt,t){
   dog.moved=0;dog.t+=dt;dog.barkCool-=dt;
   const sleepy=!(hour>=6.5&&hour<21.5)&&!parkMode&&!marketMode&&!sportMode,kidSleeping=kid.lieW>.5,dK=Math.hypot(kid.x-dog.x,kid.z-dog.z);
   let want='wander',still=false,arrived=false;
-  if(dog.forced==='eat')want='eat';else if(dog.forced==='pet')want='pet';else if(dog.forced==='fetch')want='fetch';
+  if(dog.forced==='eat')want='eat';else if(dog.forced==='pet')want='pet';else if(dog.forced==='fetch')want='fetch';else if(dog.forced==='pal')want='pal';
   else if(sleepy||kidSleeping||lieW>.5)want='sleep';
   else if(Math.hypot(mom.position.x-dog.x,mom.position.z-dog.z)<16)want='follow';
   dog.mode=want;
@@ -878,6 +887,7 @@ function updateDog(dt,t){
       if(!dog.eating){if(dogStep(BOWLSPOT.x,BOWLSPOT.z,2.5,dt)){dog.eating=true;dog.eatT=0}}
       else{dog.eatT+=dt;dog.faceYaw=-Math.PI;still=true;if(dog.eatT>7){dog.eating=false;dog.forced=null;kibble.visible=false;if(kid.solo&&kid.solo.name==='feed')endSolo();barkNow('汪汪！')}}
       break;
+    case 'pal':{const e=dog.pal;if(!e||performance.now()/1000>e.end){dog.forced=null;dog.pal=null;break}const a=performance.now()/1000*1.5+e.ph;dogStep(e.cx+Math.cos(a)*e.r,e.cz+Math.sin(a)*e.r,3.9,dt);break}
     case 'fetch':{const f=dog.fetch||(dog.fetch={}),dG=Math.hypot(GD.x-dog.x,GD.z-dog.z);
       if(f.ball&&!f.has){const dB=Math.hypot(f.ball.x-dog.x,f.ball.z-dog.z);dogStep(f.ball.x,f.ball.z,3.6,dt);if(f.ball.t>=1&&dB<.4)f.has=true}
       else if(f.has){if(dogStep(GD.x+.5,GD.z+.2,3.0,dt)||dG<.9){f.ball=null;f.has=false;barkNow('汪！');for(let i=0;i<3;i++)setTimeout(()=>spawnHeart(GD.x,1.2,GD.z),i*200);fsay(GD,'好棒，'+DOG_NAME+'！',2.5);dpThrowAge=1.5}}
@@ -1874,7 +1884,7 @@ function marketFx(dt,t){
   vendors.forEach((v,i)=>{const u=v.userData;u.wave=Math.max(0,(u.wave||0)-dt);const w=u.wave>0?Math.sin(t*9)*.5:0;u.arms[1].rotation.z=-(u.wave>0?2.0+w:.15);u.arms[0].rotation.z=.15;v.rotation.y=Math.sin(t*.5+i)*.05;v.position.y=Math.sin(t*1.5+i)*.01});
   bulbs.forEach(g=>g.material.opacity=.9*Math.max(lampK,.35)*(on?1:0));
   steamB.forEach(s=>{const u=s.userData;u.p=(u.p+dt*.3)%1;s.position.set(u.x,1.5+u.p*.9,u.z);s.scale.setScalar(.25+u.p*.5);s.material.opacity=on?(1-u.p)*.4:0});
-  npcs.forEach(n=>{const u=n.userData;u.x+=u.dir*u.speed*dt;if(u.x>MX+14.5)u.dir=-1;if(u.x<MX-14.5)u.dir=1;u.p+=dt*u.speed*5;n.position.set(u.x,0,u.lane);n.rotation.y=u.dir>0?Math.PI/2:-Math.PI/2;u.legs[0].rotation.x=Math.sin(u.p)*.5;u.legs[1].rotation.x=-Math.sin(u.p)*.5;n.position.y=Math.abs(Math.sin(u.p))*.02});
+  npcWalk(dt);npcs.forEach(n=>{const u=n.userData;u.x+=u.dir*u.speed*(u.slow||1)*dt;if(u.x>MX+14.5)u.dir=-1;if(u.x<MX-14.5)u.dir=1;u.p+=dt*u.speed*5;n.position.set(u.x,0,u.lane+(u.zOff||0));n.rotation.y=u.dir>0?Math.PI/2:-Math.PI/2;u.legs[0].rotation.x=Math.sin(u.p)*.5;u.legs[1].rotation.x=-Math.sin(u.p)*.5;n.position.y=Math.abs(Math.sin(u.p))*.02});
   // 家裡：買回來的菜
   const atHome=!marketMode&&!parkMode&&!sportMode;
   if(atHome&&homeGroc.any&&!homeGroc.cooked){grocBag.visible=true;if(cur.name==='cook'&&cur.phase==='do'){if(!homeGroc.said){homeGroc.said=true;say('今天買的菜真新鮮，媽媽煮一桌。',5)}if(cur.t>9){homeGroc.cooked=true;grocBag.visible=false}}}
@@ -2052,7 +2062,7 @@ function sportFx(dt,t){
 }
 
 // ---------- 家人：你、女婿、孫女、阿姨（你提供的 3D 模型） ----------
-const CHB={me:window.__M.me,sil:window.__M.sil,gd:window.__M.gd,lin:window.__M.lin,panda:window.__M.panda};
+const CHB={me:window.__M.me,sil:window.__M.sil,gd:window.__M.gd,lin:window.__M.lin,panda:window.__M.panda,dad:window.__M.dad};
 // 模型在建模時的手臂角度不同（你：張開約 47°、女婿與妹妹：T 字約 88°、孫女：約 25°），這裡把手臂自動放下來
 // glow = 貼圖自發光，數字越大越亮
 const CH_DEF={
@@ -2060,6 +2070,7 @@ const CH_DEF={
   sil:{scale:1.82,fixL:-.24,fixR:.20,glow:.5,gamma:1.4},
   gd: {scale:1.18,fixL:-.435,fixR:.48,glow:.85,gamma:1.9},
   lin:{scale:1.66,fixL:-1.543,fixR:1.543,glow:.5,gamma:1.7},
+  dad:{scale:1.76,fixL:-.2,fixR:.2,foreX:.1,handZ:.2,glow:.5,gamma:1.4},
   panda:{scale:.72,fixL:-.745,fixR:.745,glow:.9},
 };
 function brightenTex(tex,gamma){
@@ -2096,8 +2107,13 @@ function applyKidRig(t){
 // ===== 餐桌兩端與前排多放幾張椅子，讓全家一起吃飯 =====
 function chairAt(x,z,yaw){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=yaw;scene.add(g);
   B(.5,.06,.5,0xb5835a,0,.45,0,g);B(.5,.6,.06,0xb5835a,0,.8,-.27,g);B(.4,.05,.4,0xe9b9a0,0,.5,0,g);for(const [a,b] of [[-.2,-.2],[.2,-.2],[-.2,.2],[.2,.2]])C(.025,.025,.44,0x7a5230,a,.22,b,g,8)}
-const SEAT={sil:{x:.4,z:-1.2,face:-Math.PI/2},gd:{x:-2.8,z:-1.2,face:Math.PI/2},lin:{x:-1.9,z:-.1,face:Math.PI}};
-chairAt(SEAT.sil.x,SEAT.sil.z,SEAT.sil.face);chairAt(SEAT.gd.x,SEAT.gd.z,SEAT.gd.face);chairAt(SEAT.lin.x,SEAT.lin.z,SEAT.lin.face);
+// 餐桌加長，兩側與兩端共八張椅子，全家可以坐在一起吃飯
+const SEAT={dad:{x:-2.7,z:-2.3,face:0},sil:{x:1.45,z:-1.2,face:-Math.PI/2},gd:{x:-3.75,z:-1.2,face:Math.PI/2},lin:{x:-2.7,z:-.1,face:Math.PI}};
+B(1.0,.07,1.2,0x9b6b43,-2.8,.76,-1.2);B(1.0,.07,1.2,0x9b6b43,.4,.76,-1.2);
+for(const [x,z] of [[-3.2,-1.7],[-3.2,-.7],[.8,-1.7],[.8,-.7]])C(.05,.05,.74,0x7a5230,x,.37,z,scene,10);
+B(5.2,.02,2.6,0xe0cba8,-1.2,.012,-1.2);OBST.push([-3.5,-2.5,-2.65,.2],[.1,1.1,-2.65,.2]);
+chairAt(SEAT.sil.x,SEAT.sil.z,SEAT.sil.face);chairAt(SEAT.gd.x,SEAT.gd.z,SEAT.gd.face);chairAt(SEAT.lin.x,SEAT.lin.z,SEAT.lin.face);chairAt(SEAT.dad.x,SEAT.dad.z,SEAT.dad.face);
+chairAt(.3,-2.3,0);chairAt(.3,-.1,Math.PI);
 
 // ===== 家人 =====
 const fam=[];
@@ -2114,12 +2130,21 @@ const GD=makeFam('gd',{x:5.6,z:.9,face:0,sit:'ground',mode:'play'},{f:0,r:-.75},
 const LIN=makeFam('lin',{x:.8,z:-3.55,face:Math.PI,mode:'idle'},{f:-.5,r:-1.7},.3,.82,3.4,1.62);
 // 熊貓：孫女的寵物，一直跟在孫女身邊
 const PANDA=makeFam("panda",{x:6.3,z:1.15,face:0,sit:"ground",mode:"idle"},{f:0,r:0},.13,.36,4.2,.85);
+// 爸爸（爸爸）：在家坐在右側的扶手椅上看電視
+const DAD=makeFam('dad',{x:6.45,z:2.7,face:-2.2,sit:'chair',mode:'tv'},{f:-1.3,r:1.3},.3,.84,5.1,1.72);
 const toys=new THREE.Group();scene.add(toys);
 [[5.3,.05,1.0,0xe84a4a],[5.45,.05,1.25,0x4a8ad8],[5.9,.05,1.15,0xffd24a],[5.75,.05,.65,0x4aa860],[5.35,.12,1.0,0xf48ca4]].forEach(([x,y,z,c])=>B(.13,.13,.13,c,x,y+.03,z,toys));
 
 // ===== 每個人現在該在哪裡、做什麼（隨場景與互動改變） =====
+function coupleSpot(){
+  window.holdHand=marketMode?'Left':'Right';handPos(window.holdHand+'Hand',_a);const rx=Math.cos(yaw),rz=-Math.sin(yaw),mx=mom.position.x,mz=mom.position.z;
+  const dot=(_a.x-mx)*rx+(_a.z-mz)*rz;if(Math.abs(dot)>.08)window.holdSide=dot>0?1:-1;
+  const sd=window.holdSide||1,gap=window.holdGap||.57;return {x:mx+sd*rx*gap,z:mz+sd*rz*gap}}
+function holdActive(){if(typeof rainOn!=='undefined'&&rainOn&&(parkMode||marketMode))return false;return (window.holdT>0)||((parkMode||marketMode||sportMode)&&!(typeof dogPlayT!=='undefined'&&dogPlayT>0))}
 function famRole(c){
+  if(c.key==='dad'&&holdActive()&&!['sleep','phone'].includes(cur.name)){const s=coupleSpot();return {x:s.x,z:s.z,face:yaw,sit:null,mode:'hold'}}
   if(c.key==='gd'&&window.p2On&&playKey!=='gd')return p2Role(c);
+  if(c.key==="panda"&&window.pandaEv&&performance.now()/1000<window.pandaEv.end){const e=window.pandaEv,a=performance.now()/1000*1.5+e.ph;return {x:e.cx+Math.cos(a)*e.r,z:e.cz+Math.sin(a)*e.r,face:0,sit:null,mode:"cheer"}}
   if(c.key==="panda"){const g=famRole(GD),m=g.mode;return {x:g.x+.75,z:g.z+.3,face:g.face,sit:null,mode:(m==="cheer"||m==="clap")?"cheer":"idle",look:g.look}}
   const away=parkMode||marketMode||sportMode,R=(x,z,face,sit,mode)=>({x,z,face,sit:sit||null,mode:mode||'idle'});
   if(!away){
@@ -2131,6 +2156,7 @@ function famRole(c){
     if(dogPlayT>0&&c.key==='gd')return R(3.6,2.7,0,null,'throw');
     const ph=cur.phase==='do';
     if(inter&&ph){
+      if(c.key==='dad'&&['hug','pat','chat','redenv'].includes(inter.name))return R(1.9,2.3,Math.PI,null,inter.name==='hug'?'hug':inter.name==='redenv'?'clap':'idle');
       if(inter.name==='hug'){if(c.key==='gd')return R(.3,2.3,Math.PI,null,'hug');if(c.key==='lin')return R(.95,2.3,Math.PI,null,'hug')}
       if(inter.name==='pat'||inter.name==='chat'){if(c.key==='gd')return R(.25,2.3,Math.PI,null,'idle');if(c.key==='lin')return R(1.25,2.3,Math.PI,null,'idle')}
       if(inter.name==='redenv'){if(c.key==='gd')return R(.3,2.3,Math.PI,null,'cheer');if(c.key==='lin')return R(.95,2.3,Math.PI,null,'clap')}
@@ -2138,17 +2164,17 @@ function famRole(c){
     if(c.key==='lin'&&(cur.name==='cook'||cur.name==='dish')&&cur.phase!=='rest'&&cur.phase!=='idle')return R(-4.2,-3.05,Math.PI,null,'chop');
     return R(c.home.x,c.home.z,c.home.face,c.home.sit,c.home.mode);
   }
-  const fx=Math.sin(yaw),fz=Math.cos(yaw),rx=Math.cos(yaw),rz=-Math.sin(yaw),follow=()=>R(mom.position.x+c.off.f*fx+c.off.r*rx,mom.position.z+c.off.f*fz+c.off.r*rz,yaw,null,'idle');
+  const fx=Math.sin(yaw),fz=Math.cos(yaw),rx=Math.cos(yaw),rz=-Math.sin(yaw),follow=()=>{const rr=(holdActive()&&window.holdSide)?-window.holdSide*Math.abs(c.off.r):c.off.r;return R(mom.position.x+c.off.f*fx+rr*rx,mom.position.z+c.off.f*fz+rr*rz,yaw,null,'idle')};
   if(parkMode){
-    if(parkAct==='photo'){if(c.key==='sil')return R(PX+1.5,4.6,0,null,'wave');if(c.key==='lin')return R(PX-1.5,4.6,0,null,'wave');return R(PX,5.5,0,null,'cheer')}
-    if(parkAct==='picnic'&&parkGo){const m={sil:[.9,-.95,-.5],gd:[-.3,.95,2.8],lin:[-.5,-.95,.3]}[c.key];return R(PICNIC.x+m[0],PICNIC.z+m[1],m[2],'ground','eat')}
-    if(parkAct==='kite'&&parkGo){const m={sil:[6.0,1.0,'point'],gd:[8.8,2.8,'cheer'],lin:[7.3,3.6,'clap']}[c.key];const r=R(PX+m[0],m[1],-2.1,null,m[2]);r.look=true;return r}
+    if(parkAct==='photo'){if(c.key==='sil')return R(PX+1.5,4.6,0,null,'wave');if(c.key==='lin')return R(PX-1.5,4.6,0,null,'wave');if(c.key==='dad')return R(PX-3.0,4.6,0,null,'wave');return R(PX,5.5,0,null,'cheer')}
+    if(parkAct==='picnic'&&parkGo){const m={sil:[.9,-.95,-.5],gd:[-.3,.95,2.8],lin:[-.5,-.95,.3],dad:[-1.5,.1,1.4]}[c.key];return R(PICNIC.x+m[0],PICNIC.z+m[1],m[2],'ground','eat')}
+    if(parkAct==='kite'&&parkGo){const m={sil:[6.0,1.0,'point'],gd:[8.8,2.8,'cheer'],lin:[7.3,3.6,'clap'],dad:[4.6,2.6,'wave']}[c.key];const r=R(PX+m[0],m[1],-2.1,null,m[2]);r.look=true;return r}
     if(dogPlayT>0&&c.key==='gd'){const r=follow();r.mode='throw';return r}
     const lk=parkAct==='kite'||parkAct==='lantern';const r=follow();r.look=lk;return r}
   if(sportMode){
-    if(sportAct==='badminton'){const m={sil:[2,4.4],gd:[-1.2,4.4],lin:[.5,4.7]}[c.key];return R(BD.x+m[0],m[1],Math.PI,null,'clap')}
-    if(sportAct==='basket'){const m={sil:[-3.4,5.2],gd:[-2.3,5.2],lin:[-1.2,5.2]}[c.key];return R(HOOP.x+m[0],m[1],Math.PI,null,'clap')}
-    if(sportAct==='bleach'){const m={sil:1.6,gd:-1.6,lin:2.6}[c.key];return R(BL.x+m,BL.z,0,'chair','eat')}
+    if(sportAct==='badminton'){const m={sil:[2,4.4],gd:[-1.2,4.4],lin:[.5,4.7],dad:[3.4,4.6]}[c.key];return R(BD.x+m[0],m[1],Math.PI,null,'clap')}
+    if(sportAct==='basket'){const m={sil:[-3.4,5.2],gd:[-2.3,5.2],lin:[-1.2,5.2],dad:[-4.5,5.2]}[c.key];return R(HOOP.x+m[0],m[1],Math.PI,null,'clap')}
+    if(sportAct==='bleach'){const m={sil:1.6,gd:-1.6,lin:2.6,dad:-3.2}[c.key];return R(BL.x+m,BL.z,0,'chair','eat')}
     const r=follow();r.jog=sportAct==='jog';return r}
   return follow();
 }
@@ -2177,6 +2203,7 @@ function famPose(c,t){
   else if(md==='tv'){const lf=Math.max(0,Math.sin(t*.45+sd))*Math.sin(t*9);
     if(c.sit==='ground'){set('LeftArm',[-.7,0,.15]);set('RightArm',[-.7,0,-.15]);set('LeftForeArm',[-1.1,0,0]);set('RightForeArm',[-1.1,0,0]);set('Spine',[.05,0,0])}
     set('Head',[-.08+.04*lf,Math.sin(t*.3+sd)*.08,0])}
+  else if(md==='hold'&&window.holdOn){if(window.holdHand==='Left'){set('RightArm',[-.2,0,0]);set('RightForeArm',[-.3,0,0])}else{set('LeftArm',[-.2,0,0]);set('LeftForeArm',[-.28,0,0])};set('Head',[.02,Math.sin(t*.6+sd)*.12,0]);if(window.holdHand==='Left')set('LeftArm',[.35*s*ww,0,.05]);else set('RightArm',[.35*s*ww,0,-.05])}
   else if(md==='point'){set('RightArm',[-2.3,0,-.25]);set('RightForeArm',[-.1,0,0]);set('LeftArm',[-.2,0,.2]);set('Head',[-.3,0,0])}
   else if(md==='throw'){const a=Math.max(0,1-dpThrowAge*2.2);set('RightArm',[-.5-1.4*a,0,-.1]);set('RightForeArm',[-.8+.5*a,0,0]);set('LeftArm',[-.4,0,.2]);set('Head',[.1,Math.sin(t*1.5+sd)*.15,0]);set('Spine',[.08+.12*a,0,0])}
   return T}
@@ -2203,7 +2230,7 @@ function famUpdate(c,dt,t){
 }
 
 // ===== 名字 =====
-const NAMES={panda:'熊貓',sil:'女婿',gd:'孫女',lin:'阿姨'};
+const NAMES={dad:'爸爸',panda:'熊貓',sil:'女婿',gd:'孫女',lin:'阿姨'};
 function nameTex(txt){const c=document.createElement('canvas');c.width=256;c.height=64;const g=c.getContext('2d');g.font='bold 34px "Noto Serif TC","PMingLiU","Microsoft JhengHei",serif';g.textAlign='center';g.textBaseline='middle';
   g.lineWidth=7;g.strokeStyle='rgba(40,28,50,.85)';g.strokeText(txt,128,34);g.fillStyle='#fff6e0';g.fillText(txt,128,34);return new THREE.CanvasTexture(c)}
 fam.forEach(c=>{const s=new THREE.Sprite(new THREE.SpriteMaterial({map:nameTex(NAMES[c.key]),transparent:true,depthWrite:false,depthTest:false}));s.scale.set(.95,.24,1);s.position.set(0,c.height+.3,0);s.renderOrder=5;c.pivot.add(s)});
@@ -2225,6 +2252,10 @@ const FAMILY_LINES=[
   {who:'kid',text:'阿姨，過來，吃飯了。'},
   {who:'kid',text:'女婿，你看，媽今天好開心。'},
   {who:'gd', text:'外婆，我愛你！'},
+  {who:'dad',away:1,text:'老伴，慢慢走，我扶著你。'},
+  {who:'dad',away:1,text:'今天天氣真好，大家一起出來走走。'},
+  {who:'dad',text:'老伴，今天辛苦了，我來幫忙。'},
+  {who:'dad',text:'寶貝，爸爸在這裡，別擔心。'},
   {who:'gd', text:'白虎，慢慢走，等等我！'},
   {who:'gd', text:'玄鳳在我肩膀上唱歌！'},
   {who:'gd', text:'貴賓，過來，我們一起玩！'},
@@ -2240,14 +2271,21 @@ function fsay(c,text,secs=4){fSpeaker=c;const b=$('fbubble');b.textContent=text;
 function famTalk(){
   const away=parkMode||marketMode||sportMode;
   const momOk=(parkMode&&parkAct==='stroll')||(marketMode&&cur.name==='market')||(sportMode&&sportAct==='jog');
-  const byKey={sil:SIL,gd:GD,lin:LIN};
+  const byKey={sil:SIL,gd:GD,lin:LIN,dad:DAD};
   const pool=FAMILY_LINES.filter(l=>(!l.away||away)&&(l.who!=='mom'||momOk)&&(l.who==='kid'||l.who==='mom'||byKey[l.who].group.visible));
   if(!pool.length)return;const l=pool[Math.random()*pool.length|0];
   if(l.who==='mom')say(l.text,4.5);else if(l.who==='kid')ksay(l.text,4);else fsay(byKey[l.who],l.text,4.5);
 }
+function separateFam(){
+  const list=[{x:mom.position.x,z:mom.position.z,fixed:true,mom:true},{x:kid.x,z:kid.z,fixed:true}];
+  fam.forEach(c=>{if(c.ch&&c.group.visible&&c.key!=='panda'&&c.sitW<.3)list.push({x:c.x,z:c.z,c})});
+  for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){const a=list[i],b=list[j];if(a.fixed&&b.fixed)continue;if(window.holdOn&&((a.mom&&b.c&&b.c.key==='dad')||(b.mom&&a.c&&a.c.key==='dad')))continue;
+    let dx=b.x-a.x,dz=b.z-a.z,d=Math.hypot(dx,dz);const m=.62;if(d>=m)continue;
+    if(d<.001){dx=1;dz=0;d=1}const k=(m-d)/d;
+    if(a.fixed){b.c.x+=dx*k;b.c.z+=dz*k}else if(b.fixed){a.c.x-=dx*k;a.c.z-=dz*k}else{a.c.x-=dx*k*.5;a.c.z-=dz*k*.5;b.c.x+=dx*k*.5;b.c.z+=dz*k*.5}}}
 function famFx(dt,t){
-  kite2Fx(t);dogPlayFx(dt,t);dustFx(t);if(typeof petsFx==='function')petsFx(dt,t);
-  fam.forEach(c=>famUpdate(c,dt,t));toys.visible=!(parkMode||marketMode||sportMode)&&GD.group.visible;
+  kite2Fx(t);dogPlayFx(dt,t);dustFx(t);if(typeof petsFx==='function'){petsFx(dt,t);socialFx(dt,t);holdTick(dt);petActTick(dt)}
+  fam.forEach(c=>famUpdate(c,dt,t));separateFam();toys.visible=!(parkMode||marketMode||sportMode)&&GD.group.visible;
   famTimer-=dt;if(famTimer<=0){famTimer=20+Math.random()*14;if(started&&!inter&&!['sleep','phone'].includes(cur.name))famTalk()}
   if(fSpeaker&&fSpeaker.ch){const p=new THREE.Vector3(fSpeaker.x,(fSpeaker.height||1.7)+.5-.3*fSpeaker.sitW,fSpeaker.z).project(camera);$('fbubble').style.left=((p.x+1)/2*innerWidth)+'px';$('fbubble').style.top=((1-p.y)/2*innerHeight-6)+'px'}
 }
@@ -2608,8 +2646,8 @@ $('goHotel').onclick=goPlace2(false,false,false,true);
 
 
 // ---------- 換人玩：孫女、女婿、阿姨也能被你操控 ----------
-const FAMBY={gd:GD,sil:SIL,lin:LIN};
-const PLAYNAME={me:'寶貝',gd:'孫女',sil:'女婿',lin:'阿姨'};
+const FAMBY={gd:GD,sil:SIL,lin:LIN,dad:DAD};
+const PLAYNAME={me:'寶貝',gd:'孫女',sil:'女婿',lin:'阿姨',dad:'爸爸'};
 let playKey='me';
 function tipOf(ch,side){const k='_tip'+side;if(!ch[k]){const o=new THREE.Object3D();ch.bones['mixamorig'+side+'Hand'].add(o);ch[k]=o}return ch[k]}
 function swapWith(key){
@@ -2760,24 +2798,29 @@ function petsFx(dt,t){
     p.group.visible=show;if(!show)return;
     const d=p.d;
     if(d.type==='shoulder'){
-      const b=rig.bones.mixamorigRightShoulder||rig.bones.mixamorigSpine2;b.getWorldPosition(_pv);
-      rig.m.getWorldQuaternion(_pq);const e=new THREE.Euler().setFromQuaternion(_pq,'YXZ');
+      const _n2=performance.now()/1000,rg2=(p.perch&&_n2<p.perch.end)?kidRig:rig;if(p.perch&&_n2>=p.perch.end)p.perch=null;
+      const b=rg2.bones.mixamorigRightShoulder||rg2.bones.mixamorigSpine2;b.getWorldPosition(_pv);
+      rg2.m.getWorldQuaternion(_pq);const e=new THREE.Euler().setFromQuaternion(_pq,'YXZ');
       p.group.position.set(_pv.x+Math.cos(e.y)*.08,_pv.y+.1,_pv.z-Math.sin(e.y)*.08);
       p.pivot.rotation.y=e.y+.35;p.pivot.position.y=0;p.pivot.rotation.z=Math.sin(t*2.1)*.04;
       if(p.model)p.model.rotation.x=Math.sin(t*3.3)*.05;
       return}
     const fx=Math.sin(ayaw),fz=Math.cos(ayaw),rx=Math.cos(ayaw),rz=-Math.sin(ayaw);
-    const tx=ax+d.off[0]*rx+d.off[1]*fx*-1,tz=az2+d.off[0]*rz+d.off[1]*fz*-1;
+    let tx=ax+d.off[0]*rx+d.off[1]*fx*-1,tz=az2+d.off[0]*rz+d.off[1]*fz*-1;
+    const _now=performance.now()/1000;let boost=1;
+    if(p.ev&&_now<p.ev.end){const a=_now*1.5+p.ev.ph;tx=p.ev.cx+Math.cos(a)*p.ev.r;tz=p.ev.cz+Math.sin(a)*p.ev.r;boost=1.35}else p.ev=null;
     if(!p.init||Math.hypot(tx-p.x,tz-p.z)>9){p.x=tx;p.z=tz;p.init=true;p.yaw=ayaw}
     const dx=tx-p.x,dz=tz-p.z,dist=Math.hypot(dx,dz);p.moved=0;
-    if(dist>.35){const sp=Math.min(d.speed||3,Math.max(.8,dist*1.8)),s=Math.min(dist,sp*dt);let nx=p.x+dx/dist*s,nz=p.z+dz/dist*s;
+    if(dist>.35&&!(p.holdUntil>_now)){const sp=Math.min((d.speed||3)*boost,Math.max(.8,dist*1.8*boost)),s=Math.min(dist,sp*dt);let nx=p.x+dx/dist*s,nz=p.z+dz/dist*s;
       if(typeof blocked==='function'&&blocked(nx,nz)){if(!blocked(nx,p.z))nz=p.z;else if(!blocked(p.x,nz))nx=p.x;else{nx=p.x;nz=p.z}}
       p.x=nx;p.z=nz;p.moved=s/dt;p.ty=Math.atan2(dx,dz)}
     else p.ty=Math.atan2(az2-p.z,ax-p.x)>-99?Math.atan2(ax-p.x,az2-p.z):p.yaw;
+    if(p.holdUntil>_now)p.ty=Math.atan2(kid.x-p.x,kid.z-p.z);
     const dy=Math.atan2(Math.sin(p.ty-p.yaw),Math.cos(p.ty-p.yaw));p.yaw+=dy*Math.min(1,dt*6);
     p.ph+=dt*9*Math.min(1,p.moved/1.5);
     p.group.position.set(p.x,0,p.z);p.pivot.rotation.y=p.yaw;
     p.pivot.position.y=Math.abs(Math.sin(p.ph))*.05*Math.min(1,p.moved/1.5);
+    if(p.reactUntil>_now)p.pivot.position.y+=Math.abs(Math.sin(_now*9))*.12;
     if(p.legs){const a=Math.min(1,p.moved/1.2),sw=.7*a*Math.sin(p.ph*1.1),kn=.45*a;
       const set=(n,x)=>{const b=p.legs[n];if(!b)return;b.quaternion.copy(b.userData.q0);if(!x)return;_pq.setFromEuler(new THREE.Euler(x,0,0));const iP=b.userData.P.clone().invert();b.quaternion.copy(iP.multiply(_pq).multiply(b.userData.P)).multiply(b.userData.q0)};
       set('bone_16',sw);set('tripo0_Left_Limb_3',-sw);set('bone_26',sw);set('bone_21',-sw);
@@ -2785,6 +2828,115 @@ function petsFx(dt,t){
     if(p.model){const br=1+Math.sin(t*1.8+p.ph*0)*.012;p.model.scale.setScalar(d.scale*br);p.model.rotation.z=Math.sin(p.ph)*.05*Math.min(1,p.moved/1.5)}
   });
 }
+
+// ---------- 路人會閃開我們：看到前面有人就繞過去，不會穿過身體 ----------
+function npcObstacles(){
+  const o=[{x:mom.position.x,z:mom.position.z,r:.7},{x:kid.x,z:kid.z,r:.7},{x:dog.x,z:dog.z,r:.5}];
+  [[SIL,.65],[GD,.55],[LIN,.65],[PANDA,.6],[DAD,.65]].forEach(([c,r])=>{if(c&&c.group&&c.group.visible)o.push({x:c.x,z:c.z,r})});
+  if(typeof pets3!=='undefined')pets3.forEach(p=>{if(p.ready&&p.group.visible&&p.d.type!=='shoulder')o.push({x:p.x,z:p.z,r:p.d.key==='tiger'?1.5:.5})});
+  return o}
+function npcWalk(dt){
+  if(!npcs||!npcs.length)return;const obs=npcObstacles();
+  // 把全家當成一整團：路人繞著整團走，從空間比較大的那一側過去
+  let cx=0,cz=0;obs.forEach(o=>{cx+=o.x;cz+=o.z});cx/=obs.length;cz/=obs.length;
+  let R=0;obs.forEach(o=>{R=Math.max(R,Math.hypot(o.x-cx,o.z-cz)+o.r)});
+  const ZMIN=-2.1,ZMAX=4.2,big={x:cx,z:cz,r:R+.7},roomLow=(cz-big.r)-ZMIN,roomHigh=ZMAX-(cz+big.r),bigSide=roomLow>=roomHigh?-1:1;
+  npcs.forEach(n=>{
+    if(n.visible===false)return;const u=n.userData;let want=0,slow=1;const z0=u.lane+(u.zOff||0);
+    // 整團：提早繞開
+    {const ahead=(big.x-u.x)*u.dir;
+      if(ahead>-big.r&&ahead<big.r+4&&Math.abs(z0-big.z)<big.r+.4){
+        want=big.z+bigSide*(big.r+.45)-u.lane;if(ahead<big.r+1.2)slow=Math.min(slow,.5)}}
+    // 個別的人再細修
+    obs.forEach(o=>{
+      const ahead=(o.x-u.x)*u.dir,dz=z0-o.z;
+      if(ahead>-.7&&ahead<2.6&&Math.abs(dz)<o.r+.65){
+        const side=Math.abs(dz)<.08?bigSide:(dz>0?1:-1);
+        const w=o.z+side*(o.r+.75)-u.lane;if(Math.abs(w)>Math.abs(want))want=w;
+        if(ahead<1.3&&Math.abs(dz)<o.r+.35)slow=Math.min(slow,.35)}});
+    want=Math.max(-3.4,Math.min(3.4,want));
+    u.zOff=(u.zOff||0)+(want-(u.zOff||0))*Math.min(1,dt*3);
+    const zz=Math.max(ZMIN,Math.min(ZMAX,u.lane+u.zOff));u.zOff=zz-u.lane;
+    u.slow=slow;
+    obs.forEach(o=>{const dx=u.x-o.x,dz=(u.lane+u.zOff)-o.z,d=Math.hypot(dx,dz),m=o.r*1.15;
+      if(d<m){const k=(m-d)/Math.max(d,.01);u.zOff+=dz*k*.7;u.x+=dx*k*.6}});
+  });
+}
+
+// ---------- 大家一起玩：糖糖和寵物們繞著圈追逐，玩完會開心 ----------
+let nextSocial=20,socialEv=null;
+const SOCIAL_LINES=['糖糖、白虎、貴賓，大家一起玩！','你們跑慢一點，不要撞到喔！','哈哈，你們玩得好開心！','熊貓也一起來！'];
+function socialMembers(){
+  const gd=(typeof playKey!=='undefined'&&playKey==='gd')?{x:kid.x,z:kid.z,yaw:kid.yaw}:{x:GD.x,z:GD.z,yaw:GD.yaw};
+  return gd}
+function startSocial(){
+  const gd=socialMembers(),pool=['poodle','tiger','panda'].filter(()=>true);
+  const n=1+Math.floor(Math.random()*3),pick=[];while(pick.length<n&&pool.length){pick.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0])}
+  const members=['dog',...pick],cx=gd.x+Math.sin(gd.yaw)*2.2,cz=gd.z+Math.cos(gd.yaw)*2.2,r=pick.includes('tiger')?2.0:1.3,end=performance.now()/1000+9;
+  socialEv={end,cx,cz,members};
+  members.forEach((m,i)=>{const e={cx,cz,r,ph:i*Math.PI*2/members.length,end};
+    if(m==='dog'){dog.forced='pal';dog.pal=Object.assign({a0:0},e)}
+    else if(m==='panda')window.pandaEv=e;
+    else{const p=pets3.find(x=>x.d.key===m);if(p)p.ev=e}});
+  barkNow('汪汪！');fsay(GD,SOCIAL_LINES[Math.random()*SOCIAL_LINES.length|0],3.5);
+}
+function finishSocial(){
+  const e=socialEv;socialEv=null;window.pandaEv=null;pets3.forEach(p=>p.ev=null);
+  if(dog.forced==='pal'){dog.forced=null;dog.pal=null}
+  for(let i=0;i<5;i++)setTimeout(()=>spawnHeart(e.cx,1.1,e.cz),i*220);
+  barkNow('汪！');
+}
+function socialFx(dt,t){
+  const now=performance.now()/1000;
+  if(socialEv){if(now>socialEv.end)finishSocial();return}
+  nextSocial-=dt;if(nextSocial>0)return;
+  nextSocial=18+Math.random()*16;
+  const ok=pets3.every(p=>p.ready)&&GD.ch&&GD.group.visible&&!inter&&(typeof dogPlayT==='undefined'||dogPlayT<=0)&&!dog.forced&&dog.sleepW<.3&&!(kid.phase==='solo');
+  if(ok)startSocial();
+}
+
+// ---------- 爸爸媽媽牽手 ----------
+window.holdT=0;window.holdOn=false;let holdSayT=0;
+function holdTick(dt){
+  const away=parkMode||marketMode||sportMode;
+  if(window.holdT>0)window.holdT-=dt;
+  const want=(window.holdT>0||away)&&DAD&&DAD.ch&&DAD.group.visible&&!['sleep','phone','bath'].includes(cur.name);
+  let near=false;
+  if(want){near=Math.hypot(DAD.x-mom.position.x,DAD.z-mom.position.z)<1.25}
+  window.holdOn=want&&near;
+  if(window.holdOn){holdSayT-=dt;if(holdSayT<=0){holdSayT=26+Math.random()*14;const L=[['老伴，慢慢走，我牽著你。','好，有你在我就安心。'],['今天天氣真好，我們多走一走。','嗯，跟你一起走，什麼都好。'],['還記得我們剛認識的時候嗎？','怎麼不記得，你呀，那時候可害羞了。']][Math.random()*3|0];
+      fsay(DAD,L[0],3.5);setTimeout(()=>say(L[1],4),2200);for(let i=0;i<3;i++)setTimeout(()=>spawnHeart((DAD.x+mom.position.x)/2,1.9,(DAD.z+mom.position.z)/2),i*250)}}
+}
+(function(){const b=document.querySelector('[data-f=holdhands]');if(!b)return;b.onclick=()=>{if(window.holdT>0){window.holdT=0;return}
+  if(inter)endInter();window.holdT=40;holdSayT=1.5;ksay('爸爸，牽著媽媽的手吧。',3)}})();
+
+// ---------- 動物互動：走過去摸摸、抱抱、玄鳳站肩膀、動物一起玩 ----------
+window.petAct=null;
+const PET_TXT={tiger:{k:['白虎，乖，讓我摸摸你。','哇，你的毛好軟。'],a:'嗷嗚～（呼嚕呼嚕）'},poodle:{k:['貴賓，過來，讓我抱抱。','你的毛捲捲的好可愛。'],a:'汪汪！'},parrot:{k:['玄鳳，來我這裡。','你要站在我肩膀上嗎？'],a:'你好！你好！'},panda:{k:['熊貓，過來，抱抱。','你軟軟的好舒服。'],a:'嗯嗯～'}};
+function petEntity(key){
+  if(key==='panda')return {x:PANDA.x,z:PANDA.z,ent:PANDA,need:.9};
+  if(key==='parrot'){const gd=(typeof playKey!=='undefined'&&playKey==='gd')?{x:kid.x,z:kid.z}:{x:GD.x,z:GD.z};return {x:gd.x,z:gd.z,p:pets3.find(x=>x.d.key==='parrot'),need:1.0}}
+  const p=pets3.find(x=>x.d.key===key);return p&&p.ready?{x:p.x,z:p.z,p,need:key==='tiger'?2.0:.85}:null}
+function petActStart(key){
+  if(key==='all'){if(typeof socialEv!=='undefined'&&!socialEv){if(inter)endInter();dog.forced=null;nextSocial=18;startSocial()}return}
+  const e=petEntity(key);if(!e||kid.phase==='solo')return;if(inter)endInter();
+  const dx=kid.x-e.x,dz=kid.z-e.z,l=Math.hypot(dx,dz)||1;
+  kid.path=[V(e.x+dx/l*e.need,e.z+dz/l*e.need)];kid.pi=0;kid.name='';kid.phase='walk';kid.target=null;
+  window.petAct={key,t0:performance.now()/1000};
+}
+function petActTick(dt){
+  const a=window.petAct;if(!a)return;const now=performance.now()/1000;
+  if(now-a.t0>16){window.petAct=null;return}
+  const e=petEntity(a.key);if(!e){window.petAct=null;return}
+  if(Math.hypot(kid.x-e.x,kid.z-e.z)>e.need+.45||kid.phase==='walk')return;
+  window.petAct=null;const tx=PET_TXT[a.key];
+  kid.faceYaw=Math.atan2(e.x-kid.x,e.z-kid.z);ksay(tx.k[Math.random()*tx.k.length|0],3.5);
+  if(e.p){e.p.holdUntil=now+4;e.p.reactUntil=now+3;if(a.key==='parrot')e.p.perch={end:now+9}}
+  setTimeout(()=>{const prox=e.ent||{x:e.p?e.p.group.position.x:e.x,z:e.p?e.p.group.position.z:e.z,height:a.key==='tiger'?1.7:.8,sitW:0,ch:true};fsay(prox,tx.a,2.8);
+    for(let i=0;i<5;i++)setTimeout(()=>spawnHeart(e.x,1.2,e.z),i*200);
+    if(a.key==='poodle'||a.key==='tiger')dog&&barkNow('汪！')},1300);
+}
+document.querySelectorAll('[data-pet]').forEach(b=>b.onclick=()=>petActStart(b.dataset.pet));
 
 // ---------- 日夜 ----------
 const KEYS=[
