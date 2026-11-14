@@ -440,7 +440,7 @@ let momReady=false;
 (function(){const bin=atob(MOM_B64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
   new THREE.GLTFLoader().parse(u8.buffer,"",g=>{const m=g.scene;m.scale.setScalar(MOM_SCALE);
     m.traverse(o=>{if(o.isBone){bones[o.name]=o;o.userData.q0=o.quaternion.clone()}
-      if(o.isMesh){o.frustumCulled=false;o.castShadow=true;if(o.material){o.material.metalness=0;o.material.roughness=.9;if(o.material.map){o.material.emissive=new THREE.Color(0xffffff);o.material.emissiveMap=o.material.map;o.material.emissiveIntensity=.8;o.material.needsUpdate=true}}}});
+      if(o.isMesh){o.frustumCulled=false;o.castShadow=true;if(o.material){o.material.metalness=0;o.material.roughness=.9;if(o.material.map){o.material.map=brightenTex(o.material.map,1.5);o.material.emissive=new THREE.Color(0xffffff);o.material.emissiveMap=o.material.map;o.material.emissiveIntensity=.7;o.material.needsUpdate=true}}}});
     pivot.add(m);Object.values(bones).forEach(b=>{b.userData.P=parentQ(b,m)});momReady=true;$('loading').textContent='';},
     e=>{console.error(e);$('loading').textContent='模型載入失敗'})})();
 // 手持道具
@@ -2053,22 +2053,29 @@ const CHB={me:window.__M.me,sil:window.__M.sil,gd:window.__M.gd,lin:window.__M.l
 // 模型在建模時的手臂角度不同（你：張開約 47°、女婿與妹妹：T 字約 88°、孫女：約 25°），這裡把手臂自動放下來
 // glow = 貼圖自發光，數字越大越亮
 const CH_DEF={
-  me: {scale:1.69,fixL:-.827,fixR:.845,glow:.6},
-  sil:{scale:1.82,fixL:-1.541,fixR:1.541,glow:.45},
-  gd: {scale:1.18,fixL:-.435,fixR:.48,glow:.9},
-  lin:{scale:1.66,fixL:-1.543,fixR:1.543,glow:.5},
+  me: {scale:1.69,fixL:-.78,fixR:.80,foreX:.42,handZ:-.45,glow:.6,gamma:1.35},
+  sil:{scale:1.82,fixL:-.24,fixR:.20,glow:.5,gamma:1.4},
+  gd: {scale:1.18,fixL:-.435,fixR:.48,glow:.85,gamma:1.9},
+  lin:{scale:1.66,fixL:-1.543,fixR:1.543,glow:.5,gamma:1.7},
   panda:{scale:.72,fixL:-.745,fixR:.745,glow:.9},
 };
+function brightenTex(tex,gamma){
+  try{const im=tex.image,w=im.width||1024,h=im.height||1024,cv=document.createElement('canvas');cv.width=w;cv.height=h;const g=cv.getContext('2d');g.drawImage(im,0,0,w,h);
+    const id=g.getImageData(0,0,w,h),d=id.data,lut=new Uint8Array(256);for(let i=0;i<256;i++)lut[i]=Math.min(255,Math.round(255*Math.pow(i/255,1/gamma)));
+    for(let i=0;i<d.length;i+=4){d[i]=lut[d[i]];d[i+1]=lut[d[i+1]];d[i+2]=lut[d[i+2]]}
+    g.putImageData(id,0,0);const t=new THREE.CanvasTexture(cv);t.flipY=tex.flipY;t.encoding=tex.encoding;t.wrapS=tex.wrapS;t.wrapT=tex.wrapT;t.anisotropy=4;return t}catch(e){return tex}}
 function loadChar(key,cb){
   const d=CH_DEF[key],bin=atob(CHB[key]),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
   new THREE.GLTFLoader().parse(u8.buffer,"",g=>{const m=g.scene;m.scale.setScalar(d.scale);const bones={};
     m.traverse(o=>{if(o.isBone){bones[o.name]=o;o.userData.q0=o.quaternion.clone()}if(o.isMesh){o.frustumCulled=false;o.castShadow=true;if(o.material){o.material.metalness=0;o.material.roughness=.9;
-        if(o.material.map){o.material.emissive=new THREE.Color(0xffffff);o.material.emissiveMap=o.material.map;o.material.emissiveIntensity=d.glow;o.material.needsUpdate=true}}}});
-    Object.values(bones).forEach(b=>{b.userData.P=parentQ(b,m)});cb({m,bones,fixL:d.fixL,fixR:d.fixR,scale:d.scale})},e=>console.error('char load',key,e))}
+        if(o.material.map){if(d.gamma)o.material.map=brightenTex(o.material.map,d.gamma);o.material.emissive=new THREE.Color(0xffffff);o.material.emissiveMap=o.material.map;o.material.emissiveIntensity=d.glow;o.material.needsUpdate=true}}}});
+    Object.values(bones).forEach(b=>{b.userData.P=parentQ(b,m)});cb({m,bones,fixL:d.fixL,fixR:d.fixR,foreX:d.foreX||0,handZ:d.handZ||0,scale:d.scale})},e=>console.error('char load',key,e))}
 const _cq=new THREE.Quaternion(),_ce=new THREE.Euler(),_cp=new THREE.Quaternion();
 function applyRig(ch,o){
   for(const k in ch.bones){const b=ch.bones[k];b.quaternion.copy(b.userData.q0);let r=o[k];
     if(k==='mixamorigLeftArm')r=[r?r[0]:0,r?r[1]:0,(r?r[2]:0)+ch.fixL];else if(k==='mixamorigRightArm')r=[r?r[0]:0,r?r[1]:0,(r?r[2]:0)+ch.fixR];
+    if(ch.handZ&&(k==='mixamorigLeftHand'||k==='mixamorigRightHand')){r=[r?r[0]:0,r?r[1]:0,(r?r[2]:0)+(k==='mixamorigLeftHand'?ch.handZ:-ch.handZ)]}
+    if(ch.foreX&&(k==='mixamorigLeftForeArm'||k==='mixamorigRightForeArm')){const x0=r?r[0]:0;r=[x0+ch.foreX*Math.max(0,1-Math.abs(x0)),r?r[1]:0,r?r[2]:0]}
     if(r&&b.userData.P){_cq.setFromEuler(_ce.set(r[0],r[1],r[2]));_cp.copy(b.userData.P).invert().multiply(_cq).multiply(b.userData.P);b.quaternion.copy(_cp).multiply(b.userData.q0)}}}
 
 // ===== 「你」 =====
