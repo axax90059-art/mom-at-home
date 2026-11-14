@@ -113,6 +113,10 @@
     <button class="in2" data-k="pet">摸摸小狗</button>
     <button class="in2" data-k="feed">餵小狗</button>
     <button class="in2" data-f="dogplay">孫女和小狗玩</button>
+    <button class="in2" data-play="gd">換孫女來玩</button>
+    <button class="in2" data-play="sil">換女婿來玩</button>
+    <button class="in2" data-play="lin">換阿姨來玩</button>
+    <button class="in2" data-play="me">換回寶貝</button>
     <button class="in2" data-k="bath">我要洗澡</button>
     <button class="in2" data-k="sleep">我要睡覺</button>
     <button class="in2" data-f="dish">幫媽媽洗碗</button>
@@ -805,7 +809,7 @@ function kidApply(dt,t){
   kp.lL.j1.rotation.x=kpose.lT[0];kp.lL.j2.rotation.x=kpose.lK[0];kp.lR.j1.rotation.x=kpose.rT[0];kp.lR.j2.rotation.x=kpose.rK[0];
   kp.aL.j1.rotation.set(kpose.lA[0],0,kpose.lA[1]);kp.aR.j1.rotation.set(kpose.rA[0],0,kpose.rA[1]);kp.aL.j2.rotation.x=kpose.lF[0];kp.aR.j2.rotation.x=kpose.rF[0];
   kp.neck.rotation.set(kpose.hd[0]+Math.sin(t*1.6)*.01,kpose.hd[1],0);kp.hips.rotation.x=kpose.lean?kpose.lean[0]:0;}
-  kgrp.position.set(kid.x,.62*kid.lieW+(kid.yOff||0),kid.z);kp.piv.rotation.x=-Math.PI/2*kid.lieW;kp.piv.position.z=-.5*kid.lieW;kp.piv.rotation.y=kid.yaw;kp.piv.position.y=-(.3+.5*kidGroundW)*kid.sitW+Math.abs(Math.sin(kid.walkPh))*.03*kid.walkAmp;
+  kgrp.position.set(kid.x,.62*kid.lieW+(kid.yOff||0),kid.z);kp.piv.rotation.x=-Math.PI/2*kid.lieW;kp.piv.position.z=-.5*kid.lieW;kp.piv.rotation.y=kid.yaw;kp.piv.position.y=-(.3+.5*kidGroundW)*kid.sitW*(window.kidSitK||1)+Math.abs(Math.sin(kid.walkPh))*.03*kid.walkAmp;
   kgrp.updateMatrixWorld(true);
   const bw=kid.name==='dine'&&kid.sitW>.6;kbowl.visible=bw;if(bw){kp.aL.tip.getWorldPosition(_a);kbowl.position.copy(_a).add(_d.set(0,.05,0))}
 }
@@ -2181,7 +2185,7 @@ function famUpdate(c,dt,t){
   keys.forEach(n=>{const a=c.pose[n]||(c.pose[n]=[0,0,0]),g=T[n]||[0,0,0];for(let i=0;i<3;i++)a[i]+=(g[i]-a[i])*k});
   applyRig(c.ch,c.pose);
   c.group.position.set(c.x,0,c.z);c.pivot.rotation.y=c.yaw;
-  c.pivot.position.y=-(c.dChair*(1-c.groundW)+c.dGround*c.groundW)*c.sitW+Math.abs(Math.sin(c.walkPh))*.03*c.walkAmp+bounce;
+  c.pivot.position.y=-(c.dChair*(1-c.groundW)+c.dGround*c.groundW)*c.sitW*(c.sitK||1)+Math.abs(Math.sin(c.walkPh))*.03*c.walkAmp+bounce;
 }
 
 // ===== 名字 =====
@@ -2584,6 +2588,33 @@ $('goNight').onclick=goPlace2(true,false,false,false);
 $('goMall').onclick=goPlace2(false,true,false,false);
 $('goHosp').onclick=goPlace2(false,false,true,false);
 $('goHotel').onclick=goPlace2(false,false,false,true);
+
+
+// ---------- 換人玩：孫女、女婿、阿姨也能被你操控 ----------
+const FAMBY={gd:GD,sil:SIL,lin:LIN};
+const PLAYNAME={me:'寶貝',gd:'孫女',sil:'女婿',lin:'阿姨'};
+let playKey='me';
+function tipOf(ch,side){const k='_tip'+side;if(!ch[k]){const o=new THREE.Object3D();ch.bones['mixamorig'+side+'Hand'].add(o);ch[k]=o}return ch[k]}
+function swapWith(key){
+  const c=FAMBY[key];if(!c||!c.ch||!kidRig)return false;
+  const a=kidRig,b=c.ch;
+  kp.piv.remove(a.m);c.pivot.remove(b.m);kp.piv.add(b.m);c.pivot.add(a.m);
+  kidRig=b;c.ch=a;
+  const sp=o=>o.children.find(x=>x.isSprite),s1=sp(kp.piv),s2=sp(c.pivot);
+  if(s1&&s2){const m1=s1.material.map;s1.material.map=s2.material.map;s2.material.map=m1;s1.material.needsUpdate=s2.material.needsUpdate=true;const y=s1.position.y;s1.position.y=s2.position.y;s2.position.y=y}
+  kp.aR.tip=tipOf(kidRig,'Right');kp.aL.tip=tipOf(kidRig,'Left');
+  window.kidSitK=kidRig.scale/1.69;c.sitK=c.ch.scale/CH_DEF[key].scale;
+  return true;
+}
+function playAs(key){
+  if(key===playKey)return;
+  if(playKey!=='me')swapWith(playKey);
+  playKey='me';
+  if(key!=='me'&&swapWith(key))playKey=key;
+  document.querySelectorAll('[data-play]').forEach(b=>b.classList.toggle('on',b.dataset.play===playKey));
+  ksay(key==='me'?'換回我自己囉。':'輪到'+PLAYNAME[key]+'來玩了！',3);
+}
+document.querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>playAs(b.dataset.play));
 
 // ---------- 日夜 ----------
 const KEYS=[
