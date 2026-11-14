@@ -87,6 +87,9 @@
 <script src="m_gd.js"></script>
 <script src="m_lin.js"></script>
 <script src="m_panda.js"></script>
+<script src="m_parrot.js"></script>
+<script src="m_tiger.js"></script>
+<script src="m_poodle.js"></script>
 </head>
 <body>
 <div id="hud"><b>媽媽在家</b><span id="clockLabel"></span></div>
@@ -2222,6 +2225,9 @@ const FAMILY_LINES=[
   {who:'kid',text:'阿姨，過來，吃飯了。'},
   {who:'kid',text:'女婿，你看，媽今天好開心。'},
   {who:'gd', text:'外婆，我愛你！'},
+  {who:'gd', text:'白虎，慢慢走，等等我！'},
+  {who:'gd', text:'玄鳳在我肩膀上唱歌！'},
+  {who:'gd', text:'貴賓，過來，我們一起玩！'},
   {who:'mom',away:1,text:'寶貝，慢慢走，媽媽陪你。'},
   {who:'mom',away:1,text:'寶貝，今天開心嗎？'},
   {who:'kid',text:'媽，我是你的孩子，我回來看你了。'},
@@ -2240,7 +2246,7 @@ function famTalk(){
   if(l.who==='mom')say(l.text,4.5);else if(l.who==='kid')ksay(l.text,4);else fsay(byKey[l.who],l.text,4.5);
 }
 function famFx(dt,t){
-  kite2Fx(t);dogPlayFx(dt,t);dustFx(t);
+  kite2Fx(t);dogPlayFx(dt,t);dustFx(t);if(typeof petsFx==='function')petsFx(dt,t);
   fam.forEach(c=>famUpdate(c,dt,t));toys.visible=!(parkMode||marketMode||sportMode)&&GD.group.visible;
   famTimer-=dt;if(famTimer<=0){famTimer=20+Math.random()*14;if(started&&!inter&&!['sleep','phone'].includes(cur.name))famTalk()}
   if(fSpeaker&&fSpeaker.ch){const p=new THREE.Vector3(fSpeaker.x,(fSpeaker.height||1.7)+.5-.3*fSpeaker.sitW,fSpeaker.z).project(camera);$('fbubble').style.left=((p.x+1)/2*innerWidth)+'px';$('fbubble').style.top=((1-p.y)/2*innerHeight-6)+'px'}
@@ -2716,6 +2722,69 @@ $('goPet').onclick=goPlace3(false,false,false,false,true);
   set(LOWQ);
   if(LOWQ)bar.addEventListener('click',e=>{if(e.target.closest('button'))setTimeout(()=>set(true),350)});
 })();
+
+
+// ---------- 孫女的三隻新寵物：玄鳳鸚鵡（站肩膀）、小白虎、貴賓犬 ----------
+const PETB={parrot:window.__M.parrot,tiger:window.__M.tiger,poodle:window.__M.poodle};
+const PET3=[
+  {key:'parrot',name:'玄鳳',scale:.3,yaw:Math.PI/2,type:'shoulder',glow:.35},
+  {key:'tiger', name:'白虎',scale:2.4,yaw:0,off:[-2.0,-1.7],glow:.3,speed:3.4},
+  {key:'poodle',name:'貴賓',scale:.42,yaw:0,off:[-1.35,.5],glow:.3,speed:2.8},
+];
+const pets3=[];
+PET3.forEach((d,i)=>{
+  const p={d,group:new THREE.Group(),pivot:new THREE.Group(),x:0,z:0,yaw:0,ph:0,moved:0,init:false,ready:false};
+  scene.add(p.group);p.group.add(p.pivot);p.group.visible=false;pets3.push(p);
+  setTimeout(()=>{
+    const bin=atob(PETB[d.key]),u8=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u8[k]=bin.charCodeAt(k);
+    new THREE.GLTFLoader().parse(u8.buffer,"",g=>{
+      const m=g.scene;m.scale.setScalar(d.scale);m.rotation.y=d.yaw;
+      m.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.castShadow=!LOWQ;if(o.material){o.material.metalness=0;o.material.roughness=.9;if(o.material.map){o.material.emissive=new THREE.Color(0xffffff);o.material.emissiveMap=o.material.map;o.material.emissiveIntensity=d.glow;o.material.needsUpdate=true}}}});
+      p.model=m;p.pivot.add(m);
+      if(d.key==='tiger'){p.legs={};m.traverse(o=>{if(o.isBone&&['bone_16','bone_26','bone_21','tripo0_Left_Limb_3','bone_22','bone_27','bone_17','tripo0_Left_Limb_4'].includes(o.name)){o.userData.q0=o.quaternion.clone();o.userData.P=parentQ(o,m);p.legs[o.name]=o}})}
+      const s=new THREE.Sprite(new THREE.SpriteMaterial({map:nameTex(d.name),transparent:true,depthWrite:false,depthTest:false}));
+      s.scale.set(d.key==='tiger'?1.0:.7,d.key==='tiger'?.26:.18,1);s.position.set(0,d.key==='parrot'?.5:(d.key==='tiger'?1.6:.62),0);s.renderOrder=5;p.tag=s;
+      if(d.type==='shoulder'){s.position.set(0,.42,0);}
+      p.pivot.add(s);p.ready=true},e=>console.error('pet load',d.key,e));
+  },4000+i*900);
+});
+const _pv=new THREE.Vector3(),_pq=new THREE.Quaternion();
+function petsFx(dt,t){
+  // 孫女本人（可能是你切換過去的那個）
+  const gdIsKid=(typeof playKey!=='undefined'&&playKey==='gd');
+  const rig=gdIsKid?kidRig:GD.ch;if(!rig)return;
+  const ax=gdIsKid?kid.x:GD.x,az2=gdIsKid?kid.z:GD.z,ayaw=gdIsKid?kid.yaw:GD.yaw;
+  const show=gdIsKid?true:GD.group.visible;
+  pets3.forEach(p=>{
+    if(!p.ready){return}
+    p.group.visible=show;if(!show)return;
+    const d=p.d;
+    if(d.type==='shoulder'){
+      const b=rig.bones.mixamorigRightShoulder||rig.bones.mixamorigSpine2;b.getWorldPosition(_pv);
+      rig.m.getWorldQuaternion(_pq);const e=new THREE.Euler().setFromQuaternion(_pq,'YXZ');
+      p.group.position.set(_pv.x+Math.cos(e.y)*.08,_pv.y+.1,_pv.z-Math.sin(e.y)*.08);
+      p.pivot.rotation.y=e.y+.35;p.pivot.position.y=0;p.pivot.rotation.z=Math.sin(t*2.1)*.04;
+      if(p.model)p.model.rotation.x=Math.sin(t*3.3)*.05;
+      return}
+    const fx=Math.sin(ayaw),fz=Math.cos(ayaw),rx=Math.cos(ayaw),rz=-Math.sin(ayaw);
+    const tx=ax+d.off[0]*rx+d.off[1]*fx*-1,tz=az2+d.off[0]*rz+d.off[1]*fz*-1;
+    if(!p.init||Math.hypot(tx-p.x,tz-p.z)>9){p.x=tx;p.z=tz;p.init=true;p.yaw=ayaw}
+    const dx=tx-p.x,dz=tz-p.z,dist=Math.hypot(dx,dz);p.moved=0;
+    if(dist>.35){const sp=Math.min(d.speed||3,Math.max(.8,dist*1.8)),s=Math.min(dist,sp*dt);let nx=p.x+dx/dist*s,nz=p.z+dz/dist*s;
+      if(typeof blocked==='function'&&blocked(nx,nz)){if(!blocked(nx,p.z))nz=p.z;else if(!blocked(p.x,nz))nx=p.x;else{nx=p.x;nz=p.z}}
+      p.x=nx;p.z=nz;p.moved=s/dt;p.ty=Math.atan2(dx,dz)}
+    else p.ty=Math.atan2(az2-p.z,ax-p.x)>-99?Math.atan2(ax-p.x,az2-p.z):p.yaw;
+    const dy=Math.atan2(Math.sin(p.ty-p.yaw),Math.cos(p.ty-p.yaw));p.yaw+=dy*Math.min(1,dt*6);
+    p.ph+=dt*9*Math.min(1,p.moved/1.5);
+    p.group.position.set(p.x,0,p.z);p.pivot.rotation.y=p.yaw;
+    p.pivot.position.y=Math.abs(Math.sin(p.ph))*.05*Math.min(1,p.moved/1.5);
+    if(p.legs){const a=Math.min(1,p.moved/1.2),sw=.7*a*Math.sin(p.ph*1.1),kn=.45*a;
+      const set=(n,x)=>{const b=p.legs[n];if(!b)return;b.quaternion.copy(b.userData.q0);if(!x)return;_pq.setFromEuler(new THREE.Euler(x,0,0));const iP=b.userData.P.clone().invert();b.quaternion.copy(iP.multiply(_pq).multiply(b.userData.P)).multiply(b.userData.q0)};
+      set('bone_16',sw);set('tripo0_Left_Limb_3',-sw);set('bone_26',sw);set('bone_21',-sw);
+      set('bone_17',kn*Math.max(0,Math.cos(p.ph*1.1)));set('tripo0_Left_Limb_4',kn*Math.max(0,-Math.cos(p.ph*1.1)));set('bone_22',kn*Math.max(0,Math.cos(p.ph*1.1)));set('bone_27',kn*Math.max(0,-Math.cos(p.ph*1.1)))}
+    if(p.model){const br=1+Math.sin(t*1.8+p.ph*0)*.012;p.model.scale.setScalar(d.scale*br);p.model.rotation.z=Math.sin(p.ph)*.05*Math.min(1,p.moved/1.5)}
+  });
+}
 
 // ---------- 日夜 ----------
 const KEYS=[
