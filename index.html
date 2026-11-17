@@ -114,6 +114,9 @@
     <button class="in" data-i="chat">跟媽媽聊聊</button>
     <button class="in" data-i="dine">陪媽媽吃飯</button>
     <button class="in" data-i="tvtog">陪媽媽看電視</button>
+    <button class="in" data-i="story">讀故事書</button>
+    <button class="in" data-i="game">玩遊戲</button>
+    <button class="in" data-i="tea">喝茶</button>
     <button class="in2" data-k="pet">摸摸小狗</button>
     <button class="in2" data-k="feed">餵小狗</button>
     <button class="in2" data-f="dogplay">孫女和小狗玩</button>
@@ -276,7 +279,7 @@ addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.a
 // ---------- 光線 ----------
 const hemi=new THREE.HemisphereLight(0xfff0dc,0x6a5848,.62);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffdca8,.62);sun.position.set(-5,11,9);sun.castShadow=true;
-sun.shadow.mapSize.set(LOWQ?1024:4096,LOWQ?1024:4096);Object.assign(sun.shadow.camera,{left:-10,right:10,top:8,bottom:-8,near:1,far:40});sun.shadow.bias=-.0006;scene.add(sun);scene.add(sun.target);
+sun.shadow.mapSize.set(LOWQ?1024:4096,LOWQ?1024:4096);Object.assign(sun.shadow.camera,{left:-17,right:17,top:11,bottom:-11,near:1,far:40});sun.shadow.bias=-.0006;scene.add(sun);scene.add(sun.target);
 const lampL=new THREE.PointLight(0xffc67a,0,10);lampL.position.set(6.6,1.9,2.2);scene.add(lampL);
 const pendL=new THREE.PointLight(0xffd29a,0,9);pendL.position.set(-1.2,2.3,-1.2);scene.add(pendL);
 const kitL=new THREE.PointLight(0xfff0d0,.35,8);kitL.position.set(-4.5,2.6,-3);scene.add(kitL);
@@ -517,7 +520,7 @@ function enterDo(){
   if(kn==='tv')tvOn=true;
   if(kn==='fold')folded.forEach(g=>g.userData.show=false);
   if(inter&&inter.name===cur.name)inter.go=true;
-  if(cur.name==='call')say(linesFor('call')[0],5);else if(cur.name==='chat')say('怎麼了？跟媽媽說說。',4.5);else if(cur.name!=='phone'&&cur.name!=='sleep'&&cur.name!=='bday'&&cur.name!=='redenv')sayRand(cur.name);
+  if(cur.name==='call')say(linesFor('call')[0],5);else if(cur.name==='chat')say('怎麼了？跟媽媽說說。',4.5);else if(cur.name!=='phone'&&cur.name!=='sleep'&&cur.name!=='bday'&&cur.name!=='redenv'&&!{story:1,game:1,tea:1}[cur.name])sayRand(cur.name);
   if(cur.name==='sleep')cur.nap=(hour>=6&&hour<18);
   lineTimer=0;heartT=0;
 }
@@ -547,7 +550,7 @@ function updateBehavior(dt,t){
       cur.t+=dt;lineTimer+=dt;
       if(IN[cur.name]){if(!inter){endDoMom();break}if(IN[cur.name].face)faceYaw=Math.atan2(kid.x-mom.position.x,kid.z-mom.position.z)}
       if(cur.name==='clean'){if(walkTo(WANDER[wi%WANDER.length],.75,dt))wi++}
-      if(lineTimer>6&&cur.t<cur.dur-3&&cur.name!=='chat'&&cur.name!=='sleep'&&cur.name!=='phone'&&cur.name!=='bday'&&cur.name!=='redenv'){lineTimer=0;sayRand(cur.name)}
+      if(lineTimer>6&&cur.t<cur.dur-3&&cur.name!=='chat'&&cur.name!=='sleep'&&cur.name!=='phone'&&cur.name!=='bday'&&cur.name!=='redenv'&&!{story:1,game:1,tea:1}[cur.name]){lineTimer=0;sayRand(cur.name)}
       if(cur.name==='hang'){const n=Math.min(6,Math.floor(cur.t/(cur.dur*.8)*6)+1);clothes.forEach((c,i)=>c.userData.show=i<n)}
       if(cur.name==='fold'){const n=Math.min(4,Math.floor(cur.t/(cur.dur*.8)*4)+1);folded.forEach((c,i)=>c.userData.show=i<n)}
       if(doneCond())endDoMom();
@@ -556,7 +559,7 @@ function updateBehavior(dt,t){
   }
   yaw+=wrap(faceYaw-yaw)*Math.min(1,dt*7);
   pivot.rotation.y=yaw;
-  const sitTarget=((kindOf(cur.name)==='eat'||kindOf(cur.name)==='tv'||kindOf(cur.name)==='bday')&&cur.phase==='do')?1:0;sitW+=(sitTarget-sitW)*Math.min(1,dt*3.2);
+  const sitTarget=((kindOf(cur.name)==='eat'||kindOf(cur.name)==='tv'||kindOf(cur.name)==='bday'||cur.name==='story'||cur.name==='game'||cur.name==='tea')&&cur.phase==='do')?1:0;sitW+=(sitTarget-sitW)*Math.min(1,dt*3.2);
   lieW+=(((cur.name==='sleep'&&cur.phase==='do')?1:0)-lieW)*Math.min(1,dt*1.6);
   walkAmp+=(Math.min(1,moved/1.55)-walkAmp)*Math.min(1,dt*7);
   walkPh+=dt*3.9*Math.max(moved,.0);
@@ -1293,11 +1296,11 @@ function enterPark(){
 function leavePark(){if(!parkMode)return;$('bubble').classList.remove('show');fadeTo('回家…',exitPark)}
 function exitPark(){
   parkMode=false;worldX=0;document.body.classList.remove('park');setRain(false);rainbow.visible=false;rainbowT=0;kid.yOff=0;momYOff=0;
-  Object.assign(sun.shadow.camera,{left:-10,right:10,top:8,bottom:-8});sun.shadow.camera.updateProjectionMatrix();
+  Object.assign(sun.shadow.camera,{left:-17,right:17,top:11,bottom:-11});sun.shadow.camera.updateProjectionMatrix();
   mom.position.set(HUB.x,0,HUB.z);yaw=faceYaw=0;sitW=0;loc='hub';cur={name:'idle',phase:'idle',t:0,path:[],pi:0};
   kid.x=-6.2;kid.z=3.3;kid.faceYaw=Math.PI/2;kid.yaw=Math.PI/2;kid.phase='walk';kid.path=[V(-5.0,2.8)];kid.pi=0;kid.name='';kid.sitW=0;
   dog.x=-5.6;dog.z=2.6;dog.target=null;
-  camManual=false;lookAt.set(0,.9,-.3);tDist=13;tEl=.5;tAz=0;
+  camManual=false;lookAt.set(.3,.9,1.3);tDist=17;tEl=.5;tAz=0;
   begin();setTimeout(()=>{ksay('我們回來了。',3);say('回來啦，洗洗手，歇一會兒。',5)},900);
 }
 function parkAction(a){if(!parkMode)return;parkAct=a;if(rainOn&&a!=='stroll'&&a!=='bench')setRain(false);parkBenchAt=false;parkKidSat=false;parkLineT=5;parkGo=false;if(!camManual)tEl=(a==='kite'||a==='lantern')?.32:(a==='photo'?.2:.5);if(a==='photo'){tDist=11.5;lookAt.y=1.15}else if(lookAt.y!==.9)lookAt.y=.9;kid.yOff=0;momYOff=0;bikeLast=parkT;if(a==='lantern'&&(hour<18.5||hour>23))hour=19.4;
@@ -1604,7 +1607,7 @@ function park4Fx(dt,t){
   // 野餐、遊樂設施
   picnicItems.visible=parkMode&&parkAct==='picnic'&&parkGo;
   if(!(parkAct==='seesaw'&&parkGo))seeBoard.rotation.z*=.9;
-  kidGroundW+=((kid.phase==='do'&&(kid.name==='picnic'||kid.name==='slide')?1:0)-kidGroundW)*Math.min(1,dt*4);
+  kidGroundW+=((kid.phase==='do'&&(kid.name==='picnic'||kid.name==='slide'||(IN[kid.name]&&IN[kid.name].gnd))?1:0)-kidGroundW)*Math.min(1,dt*4);
   // 天燈
   let anyHeld=false;
   lanterns.forEach(l=>{const u=l.userData;if(u.life<=0){l.visible=false;return}
@@ -1817,11 +1820,11 @@ function enterMarket(){
 function leaveMarket(){if(!marketMode)return;$('bubble').classList.remove('show');$('vbubble').classList.remove('show');fadeTo('回家…',exitMarket)}
 function exitMarket(){
   marketMode=false;worldX=0;document.body.classList.remove('market');setRain(false);$('marketRain').textContent='下雨天市場';
-  Object.assign(sun.shadow.camera,{left:-10,right:10,top:8,bottom:-8});sun.shadow.camera.updateProjectionMatrix();
+  Object.assign(sun.shadow.camera,{left:-17,right:17,top:11,bottom:-11});sun.shadow.camera.updateProjectionMatrix();
   mom.position.set(HUB.x,0,HUB.z);yaw=faceYaw=0;sitW=0;loc='hub';cur={name:'idle',phase:'idle',t:0,path:[],pi:0};
   kid.x=-6.2;kid.z=3.3;kid.faceYaw=Math.PI/2;kid.yaw=Math.PI/2;kid.phase='walk';kid.path=[V(-5.0,2.8)];kid.pi=0;kid.name='';kid.sitW=0;
   dog.x=-5.6;dog.z=2.6;dog.target=null;kidEating=false;
-  camManual=false;lookAt.set(0,.9,-.3);tDist=13;tEl=.5;tAz=0;
+  camManual=false;lookAt.set(.3,.9,1.3);tDist=17;tEl=.5;tAz=0;
   routineIdx=0;begin();
   setTimeout(()=>{ksay('我們買菜回來了。',3);say(homeGroc.any?'回來啦，把菜放廚房，媽媽煮一桌好菜。':'回來啦，歇一會兒。',5.5)},900);
 }
@@ -1979,11 +1982,11 @@ function enterSports(){
 function leaveSports(){if(!sportMode)return;$('bubble').classList.remove('show');fadeTo('回家…',exitSports)}
 function exitSports(){
   sportMode=false;worldX=0;document.body.classList.remove('sports');
-  Object.assign(sun.shadow.camera,{left:-10,right:10,top:8,bottom:-8});sun.shadow.camera.updateProjectionMatrix();
+  Object.assign(sun.shadow.camera,{left:-17,right:17,top:11,bottom:-11});sun.shadow.camera.updateProjectionMatrix();
   mom.position.set(HUB.x,0,HUB.z);yaw=faceYaw=0;sitW=0;loc='hub';cur={name:'idle',phase:'idle',t:0,path:[],pi:0};
   kid.x=-6.2;kid.z=3.3;kid.faceYaw=Math.PI/2;kid.yaw=Math.PI/2;kid.phase='walk';kid.path=[V(-5.0,2.8)];kid.pi=0;kid.name='';kid.sitW=0;kid.yOff=0;
   dog.x=-5.6;dog.z=2.6;dog.target=null;
-  camManual=false;lookAt.set(0,.9,-.3);tDist=13;tEl=.5;tAz=0;
+  camManual=false;lookAt.set(.3,.9,1.3);tDist=17;tEl=.5;tAz=0;
   routineIdx=0;begin();
   setTimeout(()=>{ksay('我們運動回來了。',3);say('回來啦，去洗個澡，換身乾淨衣服。',5)},900);
 }
@@ -2998,8 +3001,251 @@ document.querySelectorAll('[data-pet]').forEach(b=>b.onclick=()=>petActStart(b.d
 (function(){
   let d0=0;
   addEventListener('touchstart',e=>{if(e.touches.length===2)d0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)},{passive:true});
-  addEventListener('touchmove',e=>{if(e.touches.length===2&&d0){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);tDist=Math.max(2.4,Math.min(22,tDist-(d-d0)*.03));d0=d}},{passive:true});
+  addEventListener('touchmove',e=>{if(e.touches.length===2&&d0){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);tDist=Math.max(2.4,Math.min(30,tDist-(d-d0)*.03));d0=d}},{passive:true});
   addEventListener('touchend',()=>{d0=0},{passive:true});
+})();
+
+// ---------- 擴建：西側三間房（書房、兒童房、和室）＋東南側客房與儲藏室 ----------
+(function(){
+  const near=(a,b,t=.03)=>Math.abs(a-b)<t;
+  // 把原本的整面西牆、門換成有門洞的牆
+  scene.children.slice().forEach(m=>{const p=m.geometry&&m.geometry.parameters;if(!p)return;const q=m.position;
+    if(p.width!==undefined&&p.height!==undefined&&p.depth!==undefined){
+      if(near(p.width,.2)&&near(p.height,3.4)&&near(p.depth,9.4)&&near(q.x,-7.2)&&near(q.z,0))m.visible=false;
+      if(near(p.width,.25)&&near(p.height,.16)&&near(p.depth,9.4)&&near(q.x,-7.05)&&near(q.z,0))m.visible=false;
+      if(near(p.width,.1)&&near(p.height,2.3)&&near(p.depth,1.0)&&near(q.x,-7.1)&&near(q.z,3.3))m.visible=false;
+    }else if(p.radius!==undefined&&near(p.radius,.045)&&near(q.x,-7.02)&&near(q.z,3.0))m.visible=false;
+  });
+  const arm=(x,z,yaw,col)=>{const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=yaw;scene.add(g);B(.9,.42,.8,col,0,.24,0,g);B(.9,.6,.18,col,0,.65,-.38,g);B(.18,.5,.8,col,-.42,.4,0,g);B(.18,.5,.8,col,.42,.4,0,g)};
+  const WALL=0xeee0c8,WALL2=0xf3e6d0,LOW=0xe6d9c0,BASE=0xa8825a;
+  // 西牆（x=-7.2）：兩個門洞 z -2.4~-1.4 與 2.85~3.75
+  [[-4.7,-2.45],[-1.35,2.85],[3.75,4.7]].forEach(([a,b])=>{B(.2,3.4,b-a,WALL,-7.2,1.7,(a+b)/2);B(.25,.16,b-a,BASE,-7.05,.08,(a+b)/2)});
+  [[-2.45,-1.35],[2.85,3.75]].forEach(([a,b])=>{B(.2,.9,b-a,WALL,-7.2,2.95,(a+b)/2);B(.14,.08,b-a,0x8a6a4a,-7.2,2.5,(a+b)/2);B(.16,2.5,.08,0x8a6a4a,-7.2,1.25,a);B(.16,2.5,.08,0x8a6a4a,-7.2,1.25,b)});
+  // 外牆
+  B(7.3,3.4,.2,WALL2,-10.85,1.7,-4.7);B(7.3,.16,.25,BASE,-10.85,.08,-4.55);B(7.3,.06,.12,0xe0cfae,-10.85,3.35,-4.55);
+  B(.2,3.4,12.6,WALL,-14.3,1.7,1.6);B(.25,.16,12.6,BASE,-14.15,.08,1.6);B(.12,.06,12.6,0xe0cfae,-14.2,3.35,1.6);
+  // 房間之間的矮隔牆（不擋視線）
+  const lowZ=(z,a,b)=>{B(b-a,1.15,.14,LOW,(a+b)/2,.58,z);B(b-a,.06,.2,0xcdbb98,(a+b)/2,1.15,z)};
+  lowZ(-.5,-14.2,-9.2);lowZ(-.5,-7.8,-7.3);lowZ(2.7,-14.2,-12.6);lowZ(2.7,-11.2,-7.3);
+
+  // ===== 書房 =====
+  B(6.9,.02,4.2,0x7a5a3a,-10.75,.012,-2.6);B(3.0,.02,2.0,0x6a8fb8,-11.2,.02,-2.5);
+  B(4.6,2.2,.4,0x6a4a2a,-11.5,1.1,-4.45);
+  for(let r=0;r<5;r++)for(let i=0;i<17;i++)B(.2,.3,.07,[0xc9805a,0x6a8fb8,0xe0c060,0x7aa86a,0xd88a9a,0x8a6f9a][(r*2+i)%6],-13.6+i*.26,.4+r*.42,-4.22);
+  B(1.8,.06,.8,0x9b6b43,-11.4,.76,-3.0);[[-12.2,-3.3],[-10.6,-3.3],[-12.2,-2.7],[-10.6,-2.7]].forEach(([x,z])=>C(.04,.04,.74,0x7a5230,x,.37,z,scene,8));
+  B(.6,.38,.04,0x15181c,-11.4,1.05,-3.25);B(.12,.1,.1,0x333a44,-11.4,.84,-3.25);B(.5,.03,.18,0x444,-11.4,.8,-2.85);
+  C(.12,.16,.22,0xfff0c8,-12.1,.9,-3.1).material=new THREE.MeshBasicMaterial({color:0xffe3a8});
+  chair(-11.4,-2.2,-1);
+  const gl=C(.03,.03,.6,0x555,-13.4,.3,-1.4,scene,8);S(.26,0x4a8ad8,-13.4,.85,-1.4);
+  B(.5,.9,.5,0x9aa0a6,-8.3,.45,-4.3);B(.5,.02,.5,0x7a8087,-8.3,.9,-4.3);
+  arm(-8.6,-3.0,-Math.PI/2,0xc98a5a);
+  B(.5,.5,.5,0x8a6a4a,-8.9,.25,-2.0);S(.15,0x4f9a5a,-8.9,.7,-2.0);
+  B(.9,.7,.04,0xb08a52,-9.0,2.4,-4.55);B(.8,.6,.02,0xc8d8b8,-9.0,2.4,-4.52);
+  OBST.push([-13.9,-9.1,-4.7,-4.05],[-12.4,-10.4,-3.45,-2.55],[-9.2,-8.0,-3.6,-2.4],[-8.6,-8.0,-4.6,-4.05],[-13.7,-13.0,-1.7,-1.1]);
+
+  // ===== 兒童房 =====
+  B(6.9,.02,3.2,0xf0d0d4,-10.75,.012,1.1);C(1.3,1.3,.02,0xa8d8f0,-11.0,.025,1.2,scene,32);
+  B(1.0,.3,2.0,0xc98a7a,-13.5,.18,.65);B(.92,.18,1.9,0xfff0f4,-13.5,.42,.65);B(.9,.1,.9,0xf48ca4,-13.5,.55,1.0);B(.6,.12,.35,0xffffff,-13.5,.56,-.1);B(1.0,.8,.08,0xc98a7a,-13.5,.6,-.4);
+  S(.16,0xc98a5a,-13.5,.66,-.05);S(.11,0xc98a5a,-13.5,.84,-.05);
+  B(.4,1.2,1.0,0xf2d27a,-13.95,.6,2.2);for(let i=0;i<3;i++){B(.32,.04,.9,0xcfa84a,-13.95,.3+i*.4,2.2);B(.2,.2,.2,[0xe84a4a,0x4a8ad8,0x4aa860][i],-13.95,.42+i*.4,2.0)}
+  [[-11.8,.8,0xe84a4a],[-11.5,1.15,0x4a8ad8],[-11.2,.7,0xf2d27a],[-10.6,1.7,0x4aa860]].forEach(([x,z,c])=>{B(.25,.25,.25,c,x,.14,z)});
+  S(.18,0xff7aa8,-10.2,.2,.5);
+  B(1.4,.05,.6,0xf2d27a,-8.6,.72,2.3);[[-9.25,2.1],[-7.95,2.1],[-9.25,2.5],[-7.95,2.5]].forEach(([x,z])=>C(.03,.03,.7,0xcfa84a,x,.36,z,scene,8));
+  B(.3,.2,.02,0x6a8fb8,-8.6,.82,2.45);chair(-8.6,1.85,-1);
+  const star=(x,y,z,c)=>{const m=new THREE.Mesh(new THREE.CircleGeometry(.14,5),new THREE.MeshBasicMaterial({color:c}));m.position.set(x,y,z);m.rotation.y=Math.PI/2;scene.add(m)};
+  [[1.6,.2],[2.1,1.2],[1.4,1.9],[2.2,.0]].forEach(([y,z],i)=>star(-14.17,y,z,[0xffe06a,0xff9aa8,0x8fc1ff,0xa8e6b0][i]));
+  OBST.push([-14.0,-12.95,-.4,1.7],[-14.2,-13.7,1.7,2.7],[-9.4,-7.8,2.0,2.6]);
+
+  // ===== 和室（榻榻米客房） =====
+  B(6.9,.02,5.2,0xcdc48c,-10.75,.014,5.3);
+  for(let i=0;i<7;i++)B(.03,.024,5.2,0xa89e66,-14.1+i*1.0,.016,5.3);for(let j=0;j<3;j++)B(6.9,.024,.03,0xa89e66,-10.75,.016,3.6+j*1.7);
+  B(1.6,.08,1.1,0x7a5230,-11.0,.4,5.4);[[-11.7,4.95],[-10.3,4.95],[-11.7,5.85],[-10.3,5.85]].forEach(([x,z])=>C(.05,.05,.38,0x5a3a20,x,.19,z,scene,8));
+  B(1.7,.14,1.2,0xe8a8b8,-11.0,.42,5.4);B(1.7,.03,1.2,0xfff0e0,-11.0,.5,5.4);
+  [[-11.0,4.3],[-11.0,6.5],[-12.4,5.4],[-9.6,5.4]].forEach(([x,z],i)=>B(.6,.08,.6,[0x7a5aa0,0xc8605a,0x4a8a78,0xd8a040][i],x,.06,z));
+  C(.07,.06,.1,0xfff8ec,-11.3,.56,5.2);C(.09,.07,.12,0x8a6aa0,-10.7,.58,5.6);
+  B(.03,1.3,.5,0xf4ecd0,-14.17,1.8,5.3);B(.04,.05,.62,0x5a3a20,-14.17,2.47,5.3);B(.04,.05,.62,0x5a3a20,-14.17,1.14,5.3);
+  B(.5,.3,.9,0x7a5230,-13.9,.15,5.3);C(.1,.08,.25,0xe8eef5,-13.9,.42,5.2);S(.12,0xff9aa8,-13.9,.62,5.2);
+  B(1.0,.5,.9,0xe8d8e0,-13.3,.25,7.25);B(1.0,.08,.9,0xb88ad8,-13.3,.52,7.25);
+  C(.2,.15,.18,0x8a5a3a,-8.2,.1,7.2);S(.3,0x4f9a5a,-8.2,.42,7.2);
+  B(.9,.7,.5,0xa8825a,-9.3,.35,7.6);B(.8,.02,.4,0xc9a870,-9.3,.71,7.6);
+  OBST.push([-11.9,-10.1,4.8,6.0],[-14.2,-13.45,4.85,5.75],[-13.85,-12.75,6.8,7.75],[-8.6,-7.8,6.8,7.6],[-9.8,-8.8,7.3,7.9]);
+
+  // ===== 東南：客房與儲藏／健身室 =====
+  B(7.5,.02,3.2,0xc4a074,11.05,.012,6.3);B(3.8,.022,3.2,0xd9d2c4,12.9,.014,6.3);
+  B(.2,3.4,3.2,WALL,14.8,1.7,6.3);B(.1,.12,3.2,BASE,14.7,.06,6.3);
+  lowZ(4.7,7.3,9.3);lowZ(4.7,10.5,14.8);
+  [[4.7,5.0],[6.2,7.9]].forEach(([a,b])=>B(.14,3.4,b-a,WALL2,11.0,1.7,(a+b)/2));B(.14,.9,1.2,WALL2,11.0,2.95,5.6);
+  // 客房
+  B(1.6,.3,2.0,0x8a6a4a,8.5,.18,6.8);B(1.5,.2,1.9,0x9bbbe0,8.5,.4,6.8);B(.5,.12,.3,0xffffff,8.2,.55,7.55);B(.5,.12,.3,0xffffff,8.8,.55,7.55);B(1.7,.9,.1,0x7a5a3a,8.5,.65,7.85);B(1.5,.1,.8,0xe8b0b8,8.5,.52,6.3);
+  B(.5,.5,.45,0x9b6b43,9.65,.25,7.6);const nl=C(.12,.16,.2,0xfff0c8,9.65,.68,7.6);nl.material=new THREE.MeshBasicMaterial({color:0xffe3a8});
+  arm(10.2,7.0,Math.PI,0x7aa58a);B(1.8,.02,1.3,0xe8d0a0,9.6,.02,5.6);
+  B(1.0,1.2,.06,0xb08a52,7.5,1.9,5.8);B(.9,1.1,.02,0xcfe9ff,7.5,1.9,5.83);
+  OBST.push([7.65,9.35,5.75,7.9],[9.35,10.0,7.3,7.9],[9.8,10.7,6.3,7.8]);
+  // 儲藏／健身
+  B(3.4,2.0,.4,0x8a6a4a,12.9,1.0,7.7);for(let r=0;r<4;r++){B(3.3,.05,.38,0x6a4a2a,12.9,.3+r*.5,7.7)}
+  [[11.7,.46,0xc9a878],[12.3,.46,0xd9b888],[13.0,.96,0xc9a878],[13.6,.96,0xb89868],[12.2,1.46,0xd9b888],[13.3,1.46,0xc9a878]].forEach(([x,y,c])=>B(.5,.4,.32,c,x,y+.1,7.55));
+  B(.6,2.0,1.4,0xa8825a,14.45,1.0,5.8);B(.02,1.8,.6,0x8a6a4a,14.14,1.0,5.5);B(.02,1.8,.6,0x8a6a4a,14.14,1.0,6.1);
+  B(1.8,.03,.6,0x8fc1ff,12.5,.03,5.5);C(.06,.06,.3,0x555,13.2,.1,5.9,scene,8).rotation.z=Math.PI/2;C(.06,.06,.3,0x555,13.2,.1,6.2,scene,8).rotation.z=Math.PI/2;
+  OBST.push([11.1,14.7,7.45,7.9],[14.1,14.8,5.0,6.6]);
+
+  // ===== 通行規則：開出門洞、進出新房間 =====
+  const inGap=(v,a,b,m)=>v>a+m&&v<b-m;
+  function zoneBlk(x,z,r){
+    if(x<-6.75){
+      if(x>-7.5){return !(inGap(z,-2.45,-1.35,r*.6)||inGap(z,2.85,3.75,r*.6))}
+      if(x<-14.0+r||z<-4.2||z>7.6)return true;
+      if(Math.abs(z+.5)<.07+r*.6&&!inGap(x,-9.2,-7.8,r*.5)&&x<-7.3)return true;
+      if(Math.abs(z-2.7)<.07+r*.6&&!inGap(x,-12.6,-11.2,r*.5)&&x<-7.3)return true;
+    }else if(x>7.45&&x<14.15&&z>=4.3&&z<=7.6){
+      if(z<5.0+r*.3&&!inGap(x,9.3,10.5,r*.5))return true;
+      if(Math.abs(x-11.0)<.1+r*.6&&!inGap(z,5.0,6.2,r*.5))return true;
+    }else if(x>7.45&&x<14.15&&z>7.6)return true;
+    else return undefined;
+    for(const o of OBST)if(x>o[0]-r&&x<o[1]+r&&z>o[2]-r&&z<o[3]+r)return true;
+    return false;
+  }
+  const _rb0=blocked,_rd0=dogBlocked;
+  blocked=function(x,z){if(sportMode||marketMode||parkMode)return _rb0(x,z);const v=zoneBlk(x,z,KR);return v===undefined?_rb0(x,z):v};
+  dogBlocked=function(x,z){if(sportMode||marketMode||parkMode)return _rd0(x,z);const v=zoneBlk(x,z,.13);return v===undefined?_rd0(x,z):v};
+})();
+
+// ---------- 親子時光：讀故事書（兒童房）、玩遊戲、喝茶（和室） ----------
+const ACT={story:1,game:1,tea:1};
+(function(){
+  const rev=a=>a.slice().reverse();
+  // 從客廳中央走到新房間的路線（不含起點與終點）
+  const toDoor=[V(-4,2.6),V(-6.3,3.3),V(-7.6,3.3),V(-8.8,3.4)];
+  const rStory=[...toDoor,V(-10.2,3.4),V(-11.9,3.3),V(-11.9,2.2),V(-12.0,1.0)];
+  const rGameM=[...toDoor,V(-9.0,4.6),V(-9.0,6.5)];
+  const rGameK=[...toDoor,V(-10.0,3.7)];
+  const rTeaM=[...toDoor,V(-10.2,3.6),V(-12.3,3.9)];
+  const rTeaK=[...toDoor,V(-9.2,4.4)];
+  Object.assign(IN,{
+    story:{mom:V(-13.2,.1),kid:V(-13.2,.95),mface:Math.PI/2,kface:Math.PI/2,sit:1},
+    game: {mom:V(-11.0,6.5),kid:V(-11.0,4.3),mface:Math.PI,kface:0,sit:1,gnd:1},
+    tea:  {mom:V(-12.4,5.4),kid:V(-9.6,5.4),mface:Math.PI/2,kface:-Math.PI/2,sit:1,gnd:1},
+  });
+  Object.assign(ST,{
+    story:{spot:IN.story.mom,face:Math.PI/2,exit:[IN.story.mom,...rev(rStory),HUB]},
+    game: {spot:IN.game.mom,face:Math.PI,exit:[IN.game.mom,...rev(rGameM),HUB]},
+    tea:  {spot:IN.tea.mom,face:Math.PI/2,exit:[IN.tea.mom,...rev(rTeaM),HUB]},
+  });
+  Object.assign(KX,{
+    story:[V(-13.2,.95),...rev([...rStory.slice(0,-1),V(-12.2,1.4)]),HUB],
+    game: [IN.game.kid,...rev(rGameK),HUB],
+    tea:  [IN.tea.kid,...rev(rTeaK),HUB],
+  });
+  Object.assign(DUR,{story:38,game:32,tea:32});
+  Object.assign(LINES,{story:[],game:[],tea:[]});
+
+  // ----- 道具 -----
+  const bookG=new THREE.Group(),bookM=new THREE.Group();bookG.add(bookM);bookM.rotation.x=-.55;scene.add(bookG);
+  B(.3,.035,.22,0xd8605a,0,0,0,bookM);B(.27,.03,.2,0xfffaf0,0,.012,0,bookM);B(.012,.04,.22,0x8a3a30,0,0,0,bookM);
+  bookG.visible=false;
+  const mCup=C(.045,.035,.065,0xfff8ec,0,0,0,scene,12),kCup=C(.045,.035,.065,0xfff8ec,0,0,0,scene,12);
+  mCup.visible=kCup.visible=false;
+  const teaSt=[];for(let i=0;i<6;i++){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:whiteGlow,transparent:true,depthWrite:false,opacity:0}));s.scale.set(.1,.1,1);scene.add(s);teaSt.push(s)}
+  // 棋盤（跳棋）
+  const bd=new THREE.Group();bd.position.set(-11.0,.525,5.4);bd.visible=false;scene.add(bd);
+  B(.74,.02,.74,0x8a5a30,0,0,0,bd);
+  const ckT=(()=>{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');for(let r=0;r<8;r++)for(let q=0;q<8;q++){g.fillStyle=(r+q)%2?'#5a3a22':'#f0dcb0';g.fillRect(q*32,r*32,32,32)}return new THREE.CanvasTexture(c)})();
+  const ckP=new THREE.Mesh(new THREE.PlaneGeometry(.7,.7),new THREE.MeshBasicMaterial({map:ckT}));ckP.rotation.x=-Math.PI/2;ckP.position.y=.0115;bd.add(ckP);
+  const pcs=[];
+  for(let r=0;r<8;r++)for(let q=0;q<8;q++){if((r+q)%2===0||(r>2&&r<5))continue;
+    const side=r<3?0:1,m=C(.032,.032,.018,side?0xd8403a:0x2a2a30,0,0,0,bd,14);m.userData={side,r0:r,q0:q};pcs.push(m)}
+  const SQ=.0875,gp=(i)=>(i-3.5)*SQ;
+  function resetBoard(){pcs.forEach(m=>{const u=m.userData;u.r=u.r0;u.q=u.q0;u.alive=true;u.mv=null;m.visible=true;m.position.set(gp(u.q),.018,gp(u.r))})}
+  let lastTurn=-1;
+  function moveOne(turn){
+    const side=turn%2===0?1:0,dir=side?-1:1;  // 媽媽(紅，下方)往 -z；你(黑，上方)往 +z
+    const own=pcs.filter(m=>m.userData.alive&&m.userData.side===side&&!m.userData.mv);
+    for(let tries=0;tries<12&&own.length;tries++){
+      const m=own[Math.random()*own.length|0],u=m.userData,nr=u.r+dir,nq=u.q+(Math.random()<.5?-1:1);
+      if(nr<0||nr>7||nq<0||nq>7)continue;
+      const occ=pcs.find(p=>p.userData.alive&&p.userData.r===nr&&p.userData.q===nq);
+      if(occ&&occ.userData.side===side)continue;
+      if(occ){occ.userData.alive=false;occ.visible=false}
+      u.mv={t:0,fx:m.position.x,fz:m.position.z,tx:gp(nq),tz:gp(nr)};u.r=nr;u.q=nq;return}
+  }
+
+  // ----- 手上的姿勢 -----
+  const _tp0=targetPose;
+  targetPose=function(t){
+    const T=_tp0(t),n=cur.name;
+    if(!ACT[n]||(cur.phase!=='do'&&sitW<.05))return T;
+    const set=(k,v)=>T['mixamorig'+k]=v;
+    if(IN[n].gnd){set('LeftUpLeg',[-1.3,0,.12]);set('RightUpLeg',[-1.3,0,-.12]);set('LeftLeg',[.35,0,0]);set('RightLeg',[.35,0,0])}
+    else{set('LeftUpLeg',[-1.5,0,.05]);set('RightUpLeg',[-1.5,0,-.05]);set('LeftLeg',[1.5,0,0]);set('RightLeg',[1.5,0,0])}
+    if(cur.phase!=='do')return T;
+    if(n==='story'){
+      set('Spine',[.05,0,0]);set('Head',[.3+.04*Math.sin(t*.8),Math.sin(t*.4)*.1,0]);
+      set('LeftArm',[-.85,0,-.1]);set('RightArm',[-.85,0,.1]);set('LeftForeArm',[-1.3,0,-.5]);set('RightForeArm',[-1.3+.15*Math.max(0,Math.sin(t*1.05)),0,.5]);
+    }else if(n==='game'){
+      const mine=Math.floor(cur.t/2.6)%2===0;
+      set('Spine',[.2,0,0]);set('Head',[.35,Math.sin(t*.6)*.1,0]);
+      if(mine){set('RightArm',[-1.05,0,-.1]);set('RightForeArm',[-.75+.25*Math.sin(t*5),0,0]);set('LeftArm',[-.45,0,.1]);set('LeftForeArm',[-1.0,0,0])}
+      else{set('RightArm',[-.5,0,-.1]);set('RightForeArm',[-1.0,0,0]);set('LeftArm',[-.45,0,.1]);set('LeftForeArm',[-1.0,0,0])}
+    }else if(n==='tea'){
+      const e=Math.max(0,Math.sin(t*1.1));
+      set('Spine',[-.03,0,0]);set('Head',[.05+.1*e,Math.sin(t*.4)*.08,0]);
+      set('RightArm',[-.55,0,-.12]);set('RightForeArm',[-.9-.9*e,0,0]);set('LeftArm',[-.45,0,.1]);set('LeftForeArm',[-1.0,0,0]);
+    }
+    return T;
+  };
+  const _ksp0=kidSoloPose;
+  kidSoloPose=function(T,t){
+    _ksp0(T,t);
+    const n=kid.name;
+    if(kid.phase!=='do'||!ACT[n])return;
+    if(IN[n].gnd){T.lT=[-1.35,.08];T.rT=[-1.35,-.08];T.lK=[.2,0];T.rK=[.2,0]}
+    if(n==='story'){T.lA=[-.5,.15];T.rA=[-.5,-.15];T.lF=[-1.1,0];T.rF=[-1.1,0];T.hd=[.3+.05*Math.sin(t*.9),0]}
+    else if(n==='game'){const mine=Math.floor(cur.t/2.6)%2===0;T.hd=[.35,0];T.lA=[-.45,.1];T.lF=[-1.0,0];
+      if(mine){T.rA=[-.5,-.1];T.rF=[-1.0,0]}else{T.rA=[-1.05,-.1];T.rF=[-.75+.25*Math.sin(t*5),0]}}
+    else if(n==='tea'){const e=Math.max(0,Math.sin(t*1.1+1));T.rA=[-.55,-.1];T.rF=[-.9-.55*e,0];T.hd=[.08+.1*e,0];T.lA=[-.45,.1];T.lF=[-1.0,0]}
+  };
+
+  // ----- 每一幀：道具、對話、鏡頭 -----
+  const SEQ={
+    story:[[.6,'m','來，坐過來，媽媽念故事給你聽。'],[6.5,'m','從前從前，山上住著一隻愛唱歌的小熊貓……'],[9,'k','然後呢？'],[13,'m','牠每天晚上唱歌給月亮聽，月亮聽了就笑了。'],[19.5,'m','有一天，牠遇見一隻迷路的小白虎。'],[21,'k','小白虎怕不怕呀？'],[25,'m','牠們手牽手一起找路，最後成了最好的朋友。'],[31,'m','故事說完囉，從此牠們再也不孤單了。'],[34,'k','媽媽，我好喜歡這個故事，明天還要聽。']],
+    game:[[.6,'m','來，這盤媽媽先走。'],[5,'k','媽媽，輪到我了嗎？'],[9,'m','哎呀，被你吃掉一顆。'],[14,'k','嘿嘿，我要贏了喔！'],[19,'m','你好會下，媽媽要小心了。'],[24,'k','再來一局好不好？'],[27,'m','好，這局你贏了，下次媽媽不讓你。']],
+    tea:[[.6,'m','來，喝杯熱茶，暖暖身子。'],[6,'k','好香喔，謝謝媽媽。'],[9,'m','小心燙，慢慢喝。'],[15,'k','媽媽泡的茶最好喝。'],[18,'m','這是媽媽最喜歡的茶，配點心更好。'],[25,'m','有你陪著喝茶，真好。'],[28,'k','我們下次還要一起喝。']]
+  };
+  let seq={n:'',i:0,last:0},camAct=0,camRet=0;
+  function actTick(dt,t){
+    const act=(cur.phase==='do'&&ACT[cur.name]&&inter&&inter.name===cur.name&&inter.go)?cur.name:'';
+    // 地板坐姿（榻榻米）
+    if(!parkMode&&!sportMode&&!marketMode){
+      const gm=(act&&IN[act].gnd)?1:0;groundW+=(gm-groundW)*Math.min(1,dt*3);
+    }
+    // 對話
+    if(act){
+      if(seq.n!==act||cur.t<seq.last-.5){seq={n:act,i:0,last:cur.t}}
+      seq.last=cur.t;const L=SEQ[act];
+      while(seq.i<L.length&&cur.t>=L[seq.i][0]){const [,w,txt]=L[seq.i++];if(w==='m')say(txt,5.5);else ksay(txt,4);
+        if(w==='m'&&seq.i===L.length)for(let h=0;h<5;h++)setTimeout(()=>spawnHeart(mom.position.x,2.0,mom.position.z),h*240)}
+      if(act==='game'&&cur.t>cur.dur-5&&!seq.hh){seq.hh=1;for(let h=0;h<4;h++)setTimeout(()=>spawnHeart(kid.x,1.7,kid.z),h*220)}
+    }else seq.n='';
+    // 書
+    bookG.visible=act==='story';
+    if(bookG.visible){handPos('LeftHand',_a);handPos('RightHand',_b);bookG.position.set((_a.x+_b.x)/2,(_a.y+_b.y)/2+.03,(_a.z+_b.z)/2);bookG.rotation.y=yaw}
+    // 茶
+    const tea=act==='tea';mCup.visible=kCup.visible=tea;
+    if(tea){handPos('RightHand',_a);mCup.position.copy(_a);mCup.position.y+=.03;kp.aR.tip.getWorldPosition(_b);kCup.position.copy(_b);kCup.position.y+=.03}
+    teaSt.forEach((s,i)=>{if(!tea){s.material.opacity=0;return}const p=(t*.45+i/3)%1,c=i<3?mCup:kCup;s.position.set(c.position.x+Math.sin(t*2+i)*.02,c.position.y+.06+p*.25,c.position.z);s.material.opacity=.4*(1-p)});
+    // 棋盤
+    const game=act==='game';
+    if(game&&!bd.visible){resetBoard();lastTurn=-1}
+    bd.visible=game;
+    if(game){const turn=Math.floor(cur.t/2.6);if(turn!==lastTurn){lastTurn=turn;if(cur.t>1)moveOne(turn)}
+      pcs.forEach(m=>{const u=m.userData;if(u.mv){u.mv.t+=dt/.9;const k=Math.min(1,u.mv.t);m.position.set(u.mv.fx+(u.mv.tx-u.mv.fx)*k,.018+Math.sin(k*Math.PI)*.05,u.mv.fz+(u.mv.tz-u.mv.fz)*k);if(k>=1){m.position.y=.018;u.mv=null}}})}
+    // 鏡頭：活動時慢慢移到西側房間，結束後回到全景
+    const on=!!(inter&&ACT[inter.name])&&!parkMode&&!sportMode&&!marketMode;
+    if(on){camAct=1;const tx=inter.name==='story'?-11.5:-10.8,tz=inter.name==='story'?1.0:4.9,k=Math.min(1,dt*1.4);lookAt.x+=(tx-lookAt.x)*k;lookAt.z+=(tz-lookAt.z)*k;if(tDist>12.5)tDist+=(12.5-tDist)*k}
+    else if(camAct===1){camAct=2;camRet=0}
+    if(camAct===2){camRet+=dt;const k=Math.min(1,dt*1.4);lookAt.x+=(.3-lookAt.x)*k;lookAt.z+=(1.3-lookAt.z)*k;if(camRet>2.5)camAct=0}
+  }
+  const _hf0=helpFx;
+  helpFx=function(dt,t){_hf0(dt,t);actTick(dt,t)};
 })();
 
 // ---------- 日夜 ----------
@@ -3054,13 +3300,13 @@ function updateFx(dt,t){
   const v=new THREE.Vector3(mom.position.x,2.05-.31*sitW,mom.position.z).project(camera);
   $('bubble').style.left=((v.x+1)/2*innerWidth)+'px';$('bubble').style.top=((1-v.y)/2*innerHeight-6)+'px';
 }
-let az=0,el=.5,dist=13,tAz=0,tEl=.5,tDist=13,drag=false,lx=0,ly=0;
-const lookAt=new THREE.Vector3(0,.9,-.3);
+let az=0,el=.5,dist=17,tAz=0,tEl=.5,tDist=17,drag=false,lx=0,ly=0;
+const lookAt=new THREE.Vector3(.3,.9,1.3);
 let downX=0,downY=0;
 renderer.domElement.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;downX=e.clientX;downY=e.clientY});
 addEventListener('pointerup',e=>{drag=false;if(e.target===renderer.domElement&&Math.hypot(e.clientX-downX,e.clientY-downY)<6)floorClick(e)});
 addEventListener('pointermove',e=>{if(!drag)return;tAz=Math.max(-1.8,Math.min(1.8,tAz-(e.clientX-lx)*.005));tEl=Math.max(.05,Math.min(1.25,tEl+(e.clientY-ly)*.004));lx=e.clientX;ly=e.clientY});
-addEventListener('wheel',e=>{tDist=Math.max(2.4,Math.min(22,tDist+e.deltaY*.01))},{passive:true});
+addEventListener('wheel',e=>{tDist=Math.max(2.4,Math.min(30,tDist+e.deltaY*.01))},{passive:true});
 function updateCam(dt){const k=Math.min(1,dt*5);
   if(!camManual&&started){if(parkMode||marketMode||sportMode){const zf=Math.max(0,Math.min(1,(12-tDist)/7)),mx=(mom.position.x+kid.x)/2,mz=(mom.position.z+kid.z)/2;lookAt.x+=((mx+(kid.x-mx)*zf*.7)-lookAt.x)*Math.min(1,dt*3.5);lookAt.z+=((mz+(kid.z-mz)*zf*.7)-lookAt.z)*Math.min(1,dt*3.5)}else{const zf=Math.max(0,Math.min(1,(12-tDist)/7)),mx=(mom.position.x+kid.x)/2,mz=(mom.position.z+kid.z)/2,px=mx+(kid.x-mx)*zf*.7,pz=mz+(kid.z-mz)*zf*.7;const fx=zf>0?Math.max(-6.5,Math.min(13,px)):Math.max(-.5,Math.min(7.6,mx)),fz=-.3+zf*(pz+.3);lookAt.x+=(fx-lookAt.x)*Math.min(1,dt*3.5);lookAt.z+=(fz-lookAt.z)*Math.min(1,dt*3.5)}}az+=(tAz-az)*k;el+=(tEl-el)*k;dist+=(tDist-dist)*k;
   const asp=innerWidth/innerHeight,d=dist*(asp<1?1.0+(1-asp)*.9:1);
