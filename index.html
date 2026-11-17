@@ -3246,7 +3246,7 @@ const ACT={story:1,game:1,tea:1};
     if(game){const turn=Math.floor(cur.t/2.6);if(turn!==lastTurn){lastTurn=turn;if(cur.t>1)moveOne(turn)}
       pcs.forEach(m=>{const u=m.userData;if(u.mv){u.mv.t+=dt/.9;const k=Math.min(1,u.mv.t);m.position.set(u.mv.fx+(u.mv.tx-u.mv.fx)*k,.018+Math.sin(k*Math.PI)*.05,u.mv.fz+(u.mv.tz-u.mv.fz)*k);if(k>=1){m.position.y=.018;u.mv=null}}})}
     // 鏡頭：活動時慢慢移到西側房間，結束後回到全景
-    const on=!!(inter&&ACT[inter.name])&&!parkMode&&!sportMode&&!marketMode;
+    const on=!!(inter&&ACT[inter.name])&&!camManual&&!parkMode&&!sportMode&&!marketMode;
     if(on){camAct=1;const tx=inter.name==='story'?-11.5:-10.8,tz=inter.name==='story'?1.0:4.9,k=Math.min(1,dt*1.4);lookAt.x+=(tx-lookAt.x)*k;lookAt.z+=(tz-lookAt.z)*k;if(tDist>12.5)tDist+=(12.5-tDist)*k}
     else if(camAct===1){camAct=2;camRet=0}
     if(camAct===2){camRet+=dt;const k=Math.min(1,dt*1.4);lookAt.x+=(-3-lookAt.x)*k;lookAt.z+=(1.3-lookAt.z)*k;if(camRet>2.5)camAct=0}
@@ -3504,7 +3504,7 @@ const CARE={};let BATH=null;
   let cAct=0,cRet=0;
   function careCam(dt){
     const rest=Object.values(CARE).some(c=>c.mode==='rest'&&c.phase==='go'),on=!!BATH||rest;
-    if(on&&!parkMode&&!sportMode&&!marketMode){cAct=1;const tx=BATH?-18.2:-17.5,tz=BATH?1.0:-2.4,k=Math.min(1,dt*1.8);
+    if(on&&!camManual&&!parkMode&&!sportMode&&!marketMode){cAct=1;const tx=BATH?-18.2:-17.5,tz=BATH?1.0:-2.4,k=Math.min(1,dt*1.8);
       lookAt.x+=(tx-lookAt.x)*k;lookAt.z+=(tz-lookAt.z)*k;const td=BATH?7.5:11;if(tDist>td)tDist+=(td-tDist)*k;if(tEl<1.0)tEl+=(1.0-tEl)*k}
     else if(cAct===1){cAct=2;cRet=0}
     if(cAct===2){cRet+=dt;const k=Math.min(1,dt*1.4);lookAt.x+=(-3-lookAt.x)*k;lookAt.z+=(1.3-lookAt.z)*k;tEl+=(.5-tEl)*k;if(tDist<19)tDist+=(21-tDist)*k;if(cRet>2.5)cAct=0}
@@ -3522,6 +3522,33 @@ const CARE={};let BATH=null;
 // ---------- 效能：小東西不投影，減少繪製負擔 ----------
 (function(){if(LOWQ)return;let n=0;scene.children.forEach(m=>{const p=m.isMesh&&m.geometry&&m.geometry.parameters;if(!p||p.width===undefined||p.depth===undefined)return;
   if(Math.max(p.width,p.height,p.depth)<.9&&!m.material.transparent){m.castShadow=false;m.receiveShadow=false;n++}})})();
+// ---------- 鏡頭平移：右鍵／Shift＋拖曳、中鍵、手機雙指拖曳，可以移動旋轉中心 ----------
+(function(){
+  const cv=renderer.domElement;let pan=false,px=0,py=0,tmx=0,tmy=0;
+  const btn=document.createElement('button');btn.id='camAuto';btn.type='button';btn.textContent='🎥 鏡頭自動跟隨';
+  btn.style.cssText='position:fixed;left:10px;top:60px;z-index:30;display:none;padding:8px 14px;font-size:14px;border-radius:20px;border:1px solid rgba(255,230,180,.6);background:rgba(50,34,66,.85);color:#ffe9c8;cursor:pointer';
+  document.body.appendChild(btn);
+  btn.onclick=()=>{camManual=false;btn.style.display='none'};
+  const clampL=()=>{lookAt.x=Math.max(-24,Math.min(17,lookAt.x));lookAt.z=Math.max(-8,Math.min(12,lookAt.z));lookAt.y=Math.max(.2,Math.min(4,lookAt.y))};
+  function doPan(dx,dy){
+    const s=Math.max(.6,dist)*.0022,rx=Math.cos(az),rz=-Math.sin(az),fx=-Math.sin(az),fz=-Math.cos(az);
+    lookAt.x+=-rx*dx*s+fx*dy*s;lookAt.z+=-rz*dx*s+fz*dy*s;clampL();
+    camManual=true;btn.style.display='block';
+  }
+  window.addEventListener('pointerdown',e=>{
+    if(e.target!==cv)return;
+    if(e.button===2||e.button===1||e.shiftKey){pan=true;px=e.clientX;py=e.clientY;e.stopImmediatePropagation();e.preventDefault()}
+  },true);
+  window.addEventListener('pointermove',e=>{if(!pan)return;doPan(e.clientX-px,e.clientY-py);px=e.clientX;py=e.clientY;drag=false},true);
+  window.addEventListener('pointerup',()=>{if(pan){pan=false;drag=false}},true);
+  cv.addEventListener('contextmenu',e=>e.preventDefault());
+  // 手機：兩指一起拖曳＝平移（兩指拉開縮放仍照舊）
+  window.addEventListener('touchstart',e=>{if(e.touches.length===2){drag=false;tmx=(e.touches[0].clientX+e.touches[1].clientX)/2;tmy=(e.touches[0].clientY+e.touches[1].clientY)/2}},{passive:true});
+  window.addEventListener('touchmove',e=>{if(e.touches.length===2){drag=false;const mx=(e.touches[0].clientX+e.touches[1].clientX)/2,my=(e.touches[0].clientY+e.touches[1].clientY)/2;doPan(mx-tmx,my-tmy);tmx=mx;tmy=my}},{passive:true});
+  // 場景切換（公園、市場…）時會自動恢復跟隨，這裡同步隱藏按鈕
+  setInterval(()=>{if(!camManual)btn.style.display='none'},800);
+})();
+
 // ---------- 日夜 ----------
 const KEYS=[
   {h:0,  bg:0x0a0e24,sun:0x7f95ff,si:.22,hi:.30,hc:0x8fa0d8,lamp:1},
@@ -3582,7 +3609,7 @@ addEventListener('pointerup',e=>{drag=false;if(e.target===renderer.domElement&&M
 addEventListener('pointermove',e=>{if(!drag)return;tAz=Math.max(-1.8,Math.min(1.8,tAz-(e.clientX-lx)*.005));tEl=Math.max(.05,Math.min(1.25,tEl+(e.clientY-ly)*.004));lx=e.clientX;ly=e.clientY});
 addEventListener('wheel',e=>{tDist=Math.max(2.4,Math.min(30,tDist+e.deltaY*.01))},{passive:true});
 function updateCam(dt){const k=Math.min(1,dt*5);
-  if(!camManual&&started){if(parkMode||marketMode||sportMode){const zf=Math.max(0,Math.min(1,(12-tDist)/7)),mx=(mom.position.x+kid.x)/2,mz=(mom.position.z+kid.z)/2;lookAt.x+=((mx+(kid.x-mx)*zf*.7)-lookAt.x)*Math.min(1,dt*3.5);lookAt.z+=((mz+(kid.z-mz)*zf*.7)-lookAt.z)*Math.min(1,dt*3.5)}else{const zf=Math.max(0,Math.min(1,(12-tDist)/7)),mx=(mom.position.x+kid.x)/2,mz=(mom.position.z+kid.z)/2,px=mx+(kid.x-mx)*zf*.7,pz=mz+(kid.z-mz)*zf*.7;const fx=zf>0?Math.max(-6.5,Math.min(13,px)):Math.max(-.5,Math.min(7.6,mx)),fz=-.3+zf*(pz+.3);lookAt.x+=(fx-lookAt.x)*Math.min(1,dt*3.5);lookAt.z+=(fz-lookAt.z)*Math.min(1,dt*3.5)}}az+=(tAz-az)*k;el+=(tEl-el)*k;dist+=(tDist-dist)*k;
+  if(!camManual&&started){if(parkMode||marketMode||sportMode){const zf=Math.max(0,Math.min(1,(12-tDist)/7)),mx=(mom.position.x+kid.x)/2,mz=(mom.position.z+kid.z)/2;lookAt.x+=((mx+(kid.x-mx)*zf*.7)-lookAt.x)*Math.min(1,dt*3.5);lookAt.z+=((mz+(kid.z-mz)*zf*.7)-lookAt.z)*Math.min(1,dt*3.5)}else{const zf=Math.max(0,Math.min(1,(12-tDist)/7)),mx=(mom.position.x+kid.x)/2,mz=(mom.position.z+kid.z)/2,px=mx+(kid.x-mx)*zf*.7,pz=mz+(kid.z-mz)*zf*.7;const fx=zf>0?Math.max(-20.5,Math.min(13,px)):(-3+(Math.max(-8,Math.min(8,mx))+3)*.3),fz=1.3+zf*(pz-1.3);lookAt.x+=(fx-lookAt.x)*Math.min(1,dt*3.5);lookAt.z+=(fz-lookAt.z)*Math.min(1,dt*3.5)}}az+=(tAz-az)*k;el+=(tEl-el)*k;dist+=(tDist-dist)*k;
   const asp=innerWidth/innerHeight,d=dist*(asp<1?1.0+(1-asp)*.9:1);
   camera.position.set(lookAt.x+Math.sin(az)*Math.cos(el)*d,lookAt.y+Math.sin(el)*d,lookAt.z+Math.cos(az)*Math.cos(el)*d);camera.lookAt(lookAt)}
 
