@@ -126,6 +126,13 @@
     <button class="in2" data-pet="parrot">玄鳳站我肩上</button>
     <button class="in2" data-pet="panda">抱抱熊貓</button>
     <button class="in2" data-pet="all">動物一起玩</button>
+    <button class="in2" data-care="bath-dog">幫糖糖洗澡</button>
+    <button class="in2" data-care="bath-panda">幫熊貓洗澡</button>
+    <button class="in2" data-care="bath-tiger">幫白虎洗澡</button>
+    <button class="in2" data-care="bath-poodle">幫貴賓洗澡</button>
+    <button class="in2" data-care="bath-parrot">幫玄鳳洗澡</button>
+    <button class="in2" data-care="rest-all">寵物去休息</button>
+    <button class="in2" data-care="wake-all">叫寵物起床</button>
     <button class="in2" data-p2="1">孫女也來玩（方向鍵）</button>
     <button class="in2" data-play="gd">換孫女來玩</button>
     <button class="in2" data-play="sil">換女婿來玩</button>
@@ -279,7 +286,7 @@ addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.a
 // ---------- 光線 ----------
 const hemi=new THREE.HemisphereLight(0xfff0dc,0x6a5848,.62);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffdca8,.62);sun.position.set(-5,11,9);sun.castShadow=true;
-sun.shadow.mapSize.set(LOWQ?1024:4096,LOWQ?1024:4096);Object.assign(sun.shadow.camera,{left:-17,right:17,top:11,bottom:-11,near:1,far:40});sun.shadow.bias=-.0006;scene.add(sun);scene.add(sun.target);
+sun.shadow.mapSize.set(LOWQ?1024:4096,LOWQ?1024:4096);Object.assign(sun.shadow.camera,{left:-23,right:17,top:11,bottom:-11,near:1,far:40});sun.shadow.bias=-.0006;scene.add(sun);scene.add(sun.target);
 const lampL=new THREE.PointLight(0xffc67a,0,10);lampL.position.set(6.6,1.9,2.2);scene.add(lampL);
 const pendL=new THREE.PointLight(0xffd29a,0,9);pendL.position.set(-1.2,2.3,-1.2);scene.add(pendL);
 const kitL=new THREE.PointLight(0xfff0d0,.35,8);kitL.position.set(-4.5,2.6,-3);scene.add(kitL);
@@ -881,7 +888,7 @@ function updateDog(dt,t){
   dog.moved=0;dog.t+=dt;dog.barkCool-=dt;
   const sleepy=!(hour>=6.5&&hour<21.5)&&!parkMode&&!marketMode&&!sportMode,kidSleeping=kid.lieW>.5,dK=Math.hypot(kid.x-dog.x,kid.z-dog.z);
   let want='wander',still=false,arrived=false;
-  if(dog.forced==='eat')want='eat';else if(dog.forced==='pet')want='pet';else if(dog.forced==='fetch')want='fetch';else if(dog.forced==='pal')want='pal';
+  if(dog.forced==='eat')want='eat';else if(dog.forced==='pet')want='pet';else if(dog.forced==='fetch')want='fetch';else if(dog.forced==='pal')want='pal';else if(dog.forced==='care')want='care';
   else if(sleepy||kidSleeping||lieW>.5)want='sleep';
   else if(Math.hypot(mom.position.x-dog.x,mom.position.z-dog.z)<16)want='follow';
   dog.mode=want;
@@ -896,7 +903,7 @@ function updateDog(dt,t){
       else if(f.has){if(dogStep(GD.x+.5,GD.z+.2,3.0,dt)||dG<.9){f.ball=null;f.has=false;barkNow('汪！');for(let i=0;i<3;i++)setTimeout(()=>spawnHeart(GD.x,1.2,GD.z),i*200);fsay(GD,'好棒，'+DOG_NAME+'！',2.5);dpThrowAge=1.5}}
       else{if(dG>1.6)dogStep(GD.x,GD.z,2.2,dt);else{dog.faceYaw=Math.atan2(GD.x-dog.x,GD.z-dog.z);still=true}}
       break}
-    case 'pet': dog.faceYaw=Math.atan2(kid.x-dog.x,kid.z-dog.z);still=true;break;
+    case 'care':{const r=dogCareStep(dt);still=r.still;arrived=r.arrived;break}case 'pet': dog.faceYaw=Math.atan2(kid.x-dog.x,kid.z-dog.z);still=true;break;
     case 'sleep': arrived=dogStep(DOGBED.x,DOGBED.z,1.7,dt)||Math.hypot(DOGBED.x-dog.x,DOGBED.z-dog.z)<.12;still=arrived;break;
     case 'follow':
       const dM=Math.hypot(mom.position.x-dog.x,mom.position.z-dog.z);if(dM>1.5)dogStep(mom.position.x,mom.position.z,dM>3.5?2.7:1.4,dt);else{dog.faceYaw=Math.atan2(mom.position.x-dog.x,mom.position.z-dog.z);still=true}
@@ -906,7 +913,7 @@ function updateDog(dt,t){
       if(dog.wait>0){dog.wait-=dt;still=true}
       else{if(!dog.target)dog.target=sportMode?{x:SX-9+Math.random()*18,z:-5+Math.random()*10}:marketMode?{x:MX-6+Math.random()*12,z:.5+Math.random()*3}:parkMode?{x:PX-6+Math.random()*12,z:-5+Math.random()*10}:{x:1.5+Math.random()*5,z:-.3+Math.random()*4};if(dogStep(dog.target.x,dog.target.z,1,dt)){dog.target=null;dog.wait=2+Math.random()*4}}
   }
-  dog.sitTarget=(still&&want!=='sleep'&&want!=='eat')?1:0;dog.sleepTarget=(want==='sleep'&&arrived)?1:0;dog.eatTarget=(want==='eat'&&dog.eating)?1:0;
+  dog.sitTarget=(still&&want!=='sleep'&&want!=='eat'&&!(want==='care'&&dogCareRest()))?1:0;dog.sleepTarget=((want==='sleep'||(want==='care'&&dogCareRest()))&&arrived)?1:0;dog.eatTarget=(want==='eat'&&dog.eating)?1:0;
 }
 function dogApply(dt,t){
   const k=Math.min(1,dt*6);
@@ -1296,11 +1303,11 @@ function enterPark(){
 function leavePark(){if(!parkMode)return;$('bubble').classList.remove('show');fadeTo('回家…',exitPark)}
 function exitPark(){
   parkMode=false;worldX=0;document.body.classList.remove('park');setRain(false);rainbow.visible=false;rainbowT=0;kid.yOff=0;momYOff=0;
-  Object.assign(sun.shadow.camera,{left:-17,right:17,top:11,bottom:-11});sun.shadow.camera.updateProjectionMatrix();
+  Object.assign(sun.shadow.camera,{left:-23,right:17,top:11,bottom:-11});sun.shadow.camera.updateProjectionMatrix();
   mom.position.set(HUB.x,0,HUB.z);yaw=faceYaw=0;sitW=0;loc='hub';cur={name:'idle',phase:'idle',t:0,path:[],pi:0};
   kid.x=-6.2;kid.z=3.3;kid.faceYaw=Math.PI/2;kid.yaw=Math.PI/2;kid.phase='walk';kid.path=[V(-5.0,2.8)];kid.pi=0;kid.name='';kid.sitW=0;
   dog.x=-5.6;dog.z=2.6;dog.target=null;
-  camManual=false;lookAt.set(.3,.9,1.3);tDist=17;tEl=.5;tAz=0;
+  camManual=false;lookAt.set(-3,.9,1.3);tDist=21;tEl=.5;tAz=0;
   begin();setTimeout(()=>{ksay('我們回來了。',3);say('回來啦，洗洗手，歇一會兒。',5)},900);
 }
 function parkAction(a){if(!parkMode)return;parkAct=a;if(rainOn&&a!=='stroll'&&a!=='bench')setRain(false);parkBenchAt=false;parkKidSat=false;parkLineT=5;parkGo=false;if(!camManual)tEl=(a==='kite'||a==='lantern')?.32:(a==='photo'?.2:.5);if(a==='photo'){tDist=11.5;lookAt.y=1.15}else if(lookAt.y!==.9)lookAt.y=.9;kid.yOff=0;momYOff=0;bikeLast=parkT;if(a==='lantern'&&(hour<18.5||hour>23))hour=19.4;
@@ -1820,11 +1827,11 @@ function enterMarket(){
 function leaveMarket(){if(!marketMode)return;$('bubble').classList.remove('show');$('vbubble').classList.remove('show');fadeTo('回家…',exitMarket)}
 function exitMarket(){
   marketMode=false;worldX=0;document.body.classList.remove('market');setRain(false);$('marketRain').textContent='下雨天市場';
-  Object.assign(sun.shadow.camera,{left:-17,right:17,top:11,bottom:-11});sun.shadow.camera.updateProjectionMatrix();
+  Object.assign(sun.shadow.camera,{left:-23,right:17,top:11,bottom:-11});sun.shadow.camera.updateProjectionMatrix();
   mom.position.set(HUB.x,0,HUB.z);yaw=faceYaw=0;sitW=0;loc='hub';cur={name:'idle',phase:'idle',t:0,path:[],pi:0};
   kid.x=-6.2;kid.z=3.3;kid.faceYaw=Math.PI/2;kid.yaw=Math.PI/2;kid.phase='walk';kid.path=[V(-5.0,2.8)];kid.pi=0;kid.name='';kid.sitW=0;
   dog.x=-5.6;dog.z=2.6;dog.target=null;kidEating=false;
-  camManual=false;lookAt.set(.3,.9,1.3);tDist=17;tEl=.5;tAz=0;
+  camManual=false;lookAt.set(-3,.9,1.3);tDist=21;tEl=.5;tAz=0;
   routineIdx=0;begin();
   setTimeout(()=>{ksay('我們買菜回來了。',3);say(homeGroc.any?'回來啦，把菜放廚房，媽媽煮一桌好菜。':'回來啦，歇一會兒。',5.5)},900);
 }
@@ -1982,11 +1989,11 @@ function enterSports(){
 function leaveSports(){if(!sportMode)return;$('bubble').classList.remove('show');fadeTo('回家…',exitSports)}
 function exitSports(){
   sportMode=false;worldX=0;document.body.classList.remove('sports');
-  Object.assign(sun.shadow.camera,{left:-17,right:17,top:11,bottom:-11});sun.shadow.camera.updateProjectionMatrix();
+  Object.assign(sun.shadow.camera,{left:-23,right:17,top:11,bottom:-11});sun.shadow.camera.updateProjectionMatrix();
   mom.position.set(HUB.x,0,HUB.z);yaw=faceYaw=0;sitW=0;loc='hub';cur={name:'idle',phase:'idle',t:0,path:[],pi:0};
   kid.x=-6.2;kid.z=3.3;kid.faceYaw=Math.PI/2;kid.yaw=Math.PI/2;kid.phase='walk';kid.path=[V(-5.0,2.8)];kid.pi=0;kid.name='';kid.sitW=0;kid.yOff=0;
   dog.x=-5.6;dog.z=2.6;dog.target=null;
-  camManual=false;lookAt.set(.3,.9,1.3);tDist=17;tEl=.5;tAz=0;
+  camManual=false;lookAt.set(-3,.9,1.3);tDist=21;tEl=.5;tAz=0;
   routineIdx=0;begin();
   setTimeout(()=>{ksay('我們運動回來了。',3);say('回來啦，去洗個澡，換身乾淨衣服。',5)},900);
 }
@@ -2148,7 +2155,7 @@ function famRole(c){
   if(c.key==='dad'&&holdActive()&&!['sleep','phone'].includes(cur.name)){const s=coupleSpot();return {x:s.x,z:s.z,face:yaw,sit:null,mode:'hold'}}
   if(c.key==='gd'&&window.p2On&&playKey!=='gd')return p2Role(c);
   if(c.key==="panda"&&window.pandaEv&&performance.now()/1000<window.pandaEv.end){const e=window.pandaEv,a=performance.now()/1000*1.5+e.ph;return {x:e.cx+Math.cos(a)*e.r,z:e.cz+Math.sin(a)*e.r,face:0,sit:null,mode:"cheer"}}
-  if(c.key==="panda"){const g=famRole(GD),m=g.mode;return {x:g.x+.75,z:g.z+.3,face:g.face,sit:null,mode:(m==="cheer"||m==="clap")?"cheer":"idle",look:g.look}}
+  if(c.key==="panda"&&window.pandaCare)return window.pandaCare;if(c.key==="panda"){const g=famRole(GD),m=g.mode;return {x:g.x+.75,z:g.z+.3,face:g.face,sit:null,mode:(m==="cheer"||m==="clap")?"cheer":"idle",look:g.look}}
   const away=parkMode||marketMode||sportMode,R=(x,z,face,sit,mode)=>({x,z,face,sit:sit||null,mode:mode||'idle'});
   if(!away){
     // 吃飯、生日：全家坐到餐桌旁
@@ -2800,7 +2807,7 @@ function petsFx(dt,t){
     if(!p.ready){return}
     p.group.visible=show;if(!show)return;
     const d=p.d;
-    if(d.type==='shoulder'){
+    if(d.type==='shoulder'&&p.care){parrotCare(p,dt,t);return}if(d.type==='shoulder'){
       const _n2=performance.now()/1000,rg2=(p.perch&&_n2<p.perch.end)?kidRig:rig;if(p.perch&&_n2>=p.perch.end)p.perch=null;
       const b=rg2.bones.mixamorigRightShoulder||rg2.bones.mixamorigSpine2;b.getWorldPosition(_pv);
       rg2.m.getWorldQuaternion(_pq);const e=new THREE.Euler().setFromQuaternion(_pq,'YXZ');
@@ -2811,14 +2818,14 @@ function petsFx(dt,t){
     const fx=Math.sin(ayaw),fz=Math.cos(ayaw),rx=Math.cos(ayaw),rz=-Math.sin(ayaw);
     let tx=ax+d.off[0]*rx+d.off[1]*fx*-1,tz=az2+d.off[0]*rz+d.off[1]*fz*-1;
     const _now=performance.now()/1000;let boost=1;
-    if(p.ev&&_now<p.ev.end){const a=_now*1.5+p.ev.ph;tx=p.ev.cx+Math.cos(a)*p.ev.r;tz=p.ev.cz+Math.sin(a)*p.ev.r;boost=1.35}else p.ev=null;
+    if(p.ev&&_now<p.ev.end){const a=_now*1.5+p.ev.ph;tx=p.ev.cx+Math.cos(a)*p.ev.r;tz=p.ev.cz+Math.sin(a)*p.ev.r;boost=1.35}else p.ev=null;if(p.care){tx=p.care.tx;tz=p.care.tz;boost=1.3}
     if(!p.init||Math.hypot(tx-p.x,tz-p.z)>9){p.x=tx;p.z=tz;p.init=true;p.yaw=ayaw}
     const dx=tx-p.x,dz=tz-p.z,dist=Math.hypot(dx,dz);p.moved=0;
     if(dist>.35&&!(p.holdUntil>_now)){const sp=Math.min((d.speed||3)*boost,Math.max(.8,dist*1.8*boost)),s=Math.min(dist,sp*dt);let nx=p.x+dx/dist*s,nz=p.z+dz/dist*s;
       if(typeof blocked==='function'&&blocked(nx,nz)){if(!blocked(nx,p.z))nz=p.z;else if(!blocked(p.x,nz))nx=p.x;else{nx=p.x;nz=p.z}}
       p.x=nx;p.z=nz;p.moved=s/dt;p.ty=Math.atan2(dx,dz)}
     else p.ty=Math.atan2(az2-p.z,ax-p.x)>-99?Math.atan2(ax-p.x,az2-p.z):p.yaw;
-    if(p.holdUntil>_now)p.ty=Math.atan2(kid.x-p.x,kid.z-p.z);
+    if(p.holdUntil>_now)p.ty=Math.atan2(kid.x-p.x,kid.z-p.z);if(p.care&&p.care.at)p.ty=p.care.face;
     const dy=Math.atan2(Math.sin(p.ty-p.yaw),Math.cos(p.ty-p.yaw));p.yaw+=dy*Math.min(1,dt*6);
     p.ph+=dt*9*Math.min(1,p.moved/1.5);
     p.group.position.set(p.x,0,p.z);p.pivot.rotation.y=p.yaw;
@@ -2964,7 +2971,7 @@ document.querySelectorAll('[data-pet]').forEach(b=>b.onclick=()=>petActStart(b.d
   const panelRow=document.createElement('div');panelRow.className='row';panelRow.id='panelRow';
   const defs=[
     {k:'mom',  t:'💕 跟媽媽', parts:[['陪媽媽',()=>[...rWant.querySelectorAll('.in')]],['一起做事',()=>[...rWant.querySelectorAll('[data-f=dish],[data-f=water2]')]],['我自己',()=>[...rWant.querySelectorAll('[data-k=bath],[data-k=sleep]')]]]},
-    {k:'pet',  t:'🐾 動物', parts:[['糖糖',()=>[...rWant.querySelectorAll('[data-k=pet],[data-k=feed],[data-f=dogplay]')]],['寵物',()=>[...rWant.querySelectorAll('[data-pet]')]]]},
+    {k:'pet',  t:'🐾 動物', parts:[['糖糖',()=>[...rWant.querySelectorAll('[data-k=pet],[data-k=feed],[data-f=dogplay]')]],['寵物',()=>[...rWant.querySelectorAll('[data-pet],[data-care]')]]]},
     {k:'fam',  t:'👪 家人', parts:[['爸爸媽媽',()=>[...rWant.querySelectorAll('[data-f=holdhands]')]],['一起玩',()=>[...rWant.querySelectorAll('[data-p2]')]],['換人操控',()=>[...rWant.querySelectorAll('[data-play]')]]]},
     {k:'go',   t:'🚪 出門去', parts:[['全部',()=>[...rGo.querySelectorAll('button')]]]},
     {k:'doing',t:'🍳 媽媽在做', parts:[['全部',()=>[...rDo.querySelectorAll('button')]]]},
@@ -3242,12 +3249,279 @@ const ACT={story:1,game:1,tea:1};
     const on=!!(inter&&ACT[inter.name])&&!parkMode&&!sportMode&&!marketMode;
     if(on){camAct=1;const tx=inter.name==='story'?-11.5:-10.8,tz=inter.name==='story'?1.0:4.9,k=Math.min(1,dt*1.4);lookAt.x+=(tx-lookAt.x)*k;lookAt.z+=(tz-lookAt.z)*k;if(tDist>12.5)tDist+=(12.5-tDist)*k}
     else if(camAct===1){camAct=2;camRet=0}
-    if(camAct===2){camRet+=dt;const k=Math.min(1,dt*1.4);lookAt.x+=(.3-lookAt.x)*k;lookAt.z+=(1.3-lookAt.z)*k;if(camRet>2.5)camAct=0}
+    if(camAct===2){camRet+=dt;const k=Math.min(1,dt*1.4);lookAt.x+=(-3-lookAt.x)*k;lookAt.z+=(1.3-lookAt.z)*k;if(camRet>2.5)camAct=0}
   }
   const _hf0=helpFx;
   helpFx=function(dt,t){_hf0(dt,t);actTick(dt,t)};
 })();
 
+// ---------- 再擴建：最西側（寵物房、寵物浴室、琴房） ----------
+(function(){
+  const near=(a,b,t=.03)=>Math.abs(a-b)<t;
+  // 拿掉西側外牆，換成有門洞的牆
+  scene.children.slice().forEach(m=>{const p=m.geometry&&m.geometry.parameters;if(!p||p.width===undefined||p.depth===undefined)return;const q=m.position;
+    if(near(p.width,.2)&&near(p.height,3.4)&&near(p.depth,12.6)&&near(q.x,-14.3)&&near(q.z,1.6))m.visible=false;
+    if(near(p.width,.25)&&near(p.height,.16)&&near(p.depth,12.6)&&near(q.x,-14.15)&&near(q.z,1.6))m.visible=false;
+  });
+  const WALL=0xeee0c8,WALL2=0xf3e6d0,LOW=0xe6d9c0,BASE=0xa8825a;
+  [[-4.7,-3.2],[-2.2,3.1],[4.1,7.9]].forEach(([a,b])=>{B(.2,3.4,b-a,WALL,-14.3,1.7,(a+b)/2);B(.25,.16,b-a,BASE,-14.15,.08,(a+b)/2)});
+  [[-3.2,-2.2],[3.1,4.1]].forEach(([a,b])=>{B(.2,.9,b-a,WALL,-14.3,2.95,(a+b)/2);B(.14,.08,b-a,0x8a6a4a,-14.3,2.5,(a+b)/2);B(.16,2.5,.08,0x8a6a4a,-14.3,1.25,a);B(.16,2.5,.08,0x8a6a4a,-14.3,1.25,b)});
+  // 外牆
+  B(7.3,3.4,.2,WALL2,-17.95,1.7,-4.7);B(7.3,.16,.25,BASE,-17.95,.08,-4.55);B(7.3,.06,.12,0xe0cfae,-17.95,3.35,-4.55);
+  B(.2,3.4,12.6,WALL,-21.5,1.7,1.6);B(.25,.16,12.6,BASE,-21.35,.08,1.6);B(.12,.06,12.6,0xe0cfae,-21.4,3.35,1.6);
+  const lowZ=(z,a,b)=>{B(b-a,1.15,.14,LOW,(a+b)/2,.58,z);B(b-a,.06,.2,0xcdbb98,(a+b)/2,1.15,z)};
+  lowZ(-.5,-21.4,-16.4);lowZ(-.5,-14.9,-14.4);lowZ(2.7,-21.4,-20.4);lowZ(2.7,-19.2,-14.4);
+  const sign=(txt,x,y,z,ry)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(.95,.36),new THREE.MeshBasicMaterial({map:textTex(txt,256,96,'#fff6c8','#8a5a3a','bold 56px serif')}));m.position.set(x,y,z);m.rotation.y=ry||0;scene.add(m);return m};
+  const bed=(x,z,r,col,rim)=>{C(r,r,.12,col,x,.06,z,scene,28);const t=new THREE.Mesh(new THREE.TorusGeometry(r,.09,8,28),lam(rim));t.rotation.x=Math.PI/2;t.position.set(x,.13,z);scene.add(t);C(r-.14,r-.14,.06,0xfff6ec,x,.14,z,scene,28)};
+
+  // ===== 寵物房 =====
+  B(7.0,.02,4.2,0xe6d2b0,-17.9,.012,-2.6);B(3.2,.02,1.6,0xc8707a,-17.9,.02,-1.9);
+  bed(-20.3,-3.4,.8,0x8fb8a0,0x6a9a82);bed(-18.0,-3.4,1.15,0x9bbbe0,0x6a8fb8);bed(-15.6,-3.7,.5,0xf48ca4,0xd8708a);bed(-15.6,-1.8,.5,0xe9b9c0,0xc8909a);
+  sign('熊貓',-20.3,1.7,-4.58);sign('白虎',-18.0,1.7,-4.58);sign('貴賓',-15.6,1.7,-4.58);sign(DOG_NAME,-15.6,1.0,-1.05);C(.02,.02,1.0,0x6a4a2a,-15.6,.5,-1.07,scene,6);sign('玄鳳',-21.38,1.8,-1.3,Math.PI/2);
+  C(.03,.03,1.3,0x6a4a2a,-20.6,.65,-1.3);C(.22,.26,.05,0x6a4a2a,-20.6,.03,-1.3,scene,16);B(.55,.04,.05,0x8a5a3a,-20.6,1.3,-1.3);B(.05,.04,.5,0x8a5a3a,-20.6,1.3,-1.3);C(.07,.05,.05,0xe0c060,-20.45,1.1,-1.3);
+  B(1.6,.5,.4,0x9b6b43,-18.0,.25,-.9);[[-18.5,0xe84a4a],[-18.2,0x4a8ad8],[-17.9,0x4aa860],[-17.6,0xf2d27a],[-17.3,0xd88a9a]].forEach(([x,c])=>C(.09,.07,.05,c,x,.53,-.9,scene,14));
+  [[-19.4,-1.5,0xff7a9a],[-19.0,-1.2,0x4a8ad8],[-16.9,-1.4,0xffd24a]].forEach(([x,z,c])=>S(.11,c,x,.12,z));
+  B(.7,.3,.5,0xc9a878,-14.9,.15,-4.4);for(let i=0;i<3;i++)S(.09,[0xff7a9a,0x4a8ad8,0xffd24a][i],-15.05+i*.15,.36,-4.4);
+  OBST.push([-18.85,-17.15,-1.15,-.65],[-20.75,-20.45,-1.45,-1.15]);
+
+  // ===== 寵物浴室 =====
+  B(7.0,.02,3.2,0xcfe6ee,-17.9,.012,1.1);for(let i=0;i<7;i++)B(.02,.022,3.2,0xa8c4d0,-21.0+i,.014,1.1);
+  B(2.0,.24,1.3,0xf4f4f4,-18.4,.12,.75);B(2.1,.04,1.4,0xdfe6ea,-18.4,.24,.75);B(1.8,.02,1.1,0x7fc8e8,-18.4,.235,.75);
+  C(.025,.025,1.9,0xb0b8bd,-19.5,.95,.1,scene,8);B(.7,.03,.03,0xb0b8bd,-19.15,1.9,.1);C(.1,.12,.04,0xdadada,-18.8,1.85,.1,scene,14);
+  B(.4,.7,.4,0xe9dcc6,-20.8,.35,1.7);[[0xff9aa8,-20.9],[0x8fc1ff,-20.75],[0xa8e6b0,-20.6]].forEach(([c,x])=>C(.045,.045,.2,c,x,.8,1.7,scene,10));
+  B(.9,.05,.05,0x8a6a4a,-15.2,1.6,1.9);B(.5,.5,.05,0xf4e0a8,-15.4,1.35,1.9);B(.5,.5,.05,0xa8d8f0,-14.95,1.35,1.9);
+  B(.6,.04,.4,0x7fb5c8,-17.9,.03,2.2);B(.5,.3,.4,0x7fb5c8,-15.6,.15,.4);
+  OBST.push([-20.95,-20.65,1.3,2.1]);
+
+  // ===== 琴房 =====
+  B(7.0,.02,5.2,0x9a7a5a,-17.9,.012,5.3);B(3.2,.02,2.2,0x8a6f9a,-18.2,.02,5.2);
+  B(.6,1.25,1.7,0x1a1a1f,-21.0,.63,5.3);B(.3,.05,1.6,0xf4f4f4,-20.6,.76,5.3);for(let i=0;i<8;i++)B(.18,.03,.06,0x111,-20.55,.8,4.65+i*.2);B(.05,.4,.9,0x1a1a1f,-20.78,1.1,5.3);
+  C(.22,.22,.08,0x7a5aa0,-19.8,.4,5.3,scene,16);C(.03,.03,.4,0x555,-19.8,.2,5.3,scene,8);
+  B(1.9,.45,.8,0x6b8caf,-16.6,.25,7.2);B(1.9,.6,.2,0x5f7fa0,-16.6,.7,7.65);B(.2,.5,.8,0x5f7fa0,-15.7,.4,7.2);B(.2,.5,.8,0x5f7fa0,-17.5,.4,7.2);
+  B(.04,.5,.4,0x333,-19.2,.9,6.8);B(.04,.04,.4,0x333,-19.2,.5,6.8);
+  C(.14,.14,.9,0xc98a5a,-20.9,.45,7.4,scene,14);S(.28,0xc98a5a,-20.9,1.05,7.4);B(.05,.9,.12,0x6a4a2a,-20.9,1.7,7.4);
+  S(.28,0x4f9a5a,-14.9,.6,7.3);C(.2,.15,.3,0xb06a4a,-14.9,.17,7.3);
+  OBST.push([-21.4,-20.3,4.4,6.2],[-17.5,-15.6,6.8,7.75],[-21.2,-20.6,7.1,7.7]);
+
+  // ===== 通行規則 =====
+  const inGap=(v,a,b,m)=>v>a+m&&v<b-m;
+  function zone2(x,z,r){
+    if(x>-13.6)return undefined;
+    if(x>-14.7){
+      if(!(inGap(z,-3.2,-2.2,r*.6)||inGap(z,3.1,4.1,r*.6)))return true;
+    }else{
+      if(x<-21.4+r||z<-4.2||z>7.6)return true;
+      if(Math.abs(z+.5)<.07+r*.6&&!inGap(x,-16.4,-14.9,r*.5))return true;
+      if(Math.abs(z-2.7)<.07+r*.6&&!inGap(x,-20.4,-19.2,r*.5))return true;
+    }
+    for(const o of OBST)if(x>o[0]-r&&x<o[1]+r&&z>o[2]-r&&z<o[3]+r)return true;
+    return false;
+  }
+  const _rb1=blocked,_rd1=dogBlocked;
+  blocked=function(x,z){if(sportMode||marketMode||parkMode)return _rb1(x,z);const v=zone2(x,z,KR);return v===undefined?_rb1(x,z):v};
+  dogBlocked=function(x,z){if(sportMode||marketMode||parkMode)return _rd1(x,z);const v=zone2(x,z,.13);return v===undefined?_rd1(x,z):v};
+})();
+
+// ---------- 寵物照顧：幫寵物洗澡、寵物回自己的床休息 ----------
+const PBED={dog:V(-15.6,-1.8),panda:V(-20.3,-3.4),tiger:V(-18.0,-3.4),poodle:V(-15.6,-3.7),parrot:V(-20.6,-1.3)};
+const PTUB={dog:V(-18.0,.8),panda:V(-18.0,.8),tiger:V(-18.2,.8),poodle:V(-18.0,.8),parrot:V(-18.0,.8)};
+const PHT={dog:.45,panda:1.0,tiger:1.5,poodle:.6,parrot:.55};
+const PNAME={dog:DOG_NAME,panda:'熊貓',tiger:'白虎',poodle:'貴賓',parrot:'玄鳳'};
+const CARE={};let BATH=null;
+(function(){
+  const rev=a=>a.slice().reverse();
+  const KROUTE=[V(-3.2,1.0),V(-5.5,-.4),V(-6.3,-1.9),V(-7.6,-1.9),V(-8.2,-1.2),V(-9.5,-1.2),V(-12.5,-1.2),V(-12.5,-2.0),V(-13.4,-2.7),V(-15.0,-2.7),V(-15.7,-1.3),V(-15.7,.85)];
+  SOLO.petbath={spot:V(-16.75,.85),face:-Math.PI/2,dur:14,exit:[V(-16.75,.85),...rev(KROUTE),HUB]};
+  const getP=k=>pets3.find(p=>p.d.key===k);
+  function pos(k){
+    if(k==='dog')return {x:dog.x,z:dog.z};
+    if(k==='panda')return {x:PANDA.x,z:PANDA.z};
+    const p=getP(k);if(!p)return null;
+    if(k==='parrot'){if(p.pc)return {x:p.pc.x,z:p.pc.z};const q=p.group.position;return {x:q.x,z:q.z}}
+    return {x:p.x,z:p.z};
+  }
+  function setPos(k,x,z){
+    if(k==='dog'){dog.x=x;dog.z=z}else if(k==='panda'){PANDA.x=x;PANDA.z=z}
+    else{const p=getP(k);if(!p)return;if(k==='parrot'){if(p.pc){p.pc.x=x;p.pc.z=z}}else{p.x=x;p.z=z}}
+  }
+  const ready=k=>k==='dog'||k==='panda'?true:(getP(k)&&getP(k).ready&&getP(k).group.visible);
+  function toFar(P){
+    if(P.x<-14.5)return [];
+    const m=[V(-3.2,1.0),V(-5.5,-.4),V(-6.3,-1.9),V(-7.6,-1.9),V(-8.2,-1.2),V(-9.5,-1.2),V(-12.5,-1.2),V(-12.5,-2.0),V(-13.4,-2.7),V(-15.0,-2.7)];
+    if(P.x<-7.4)return m.slice(5);
+    return [...(P.x>2?[V(0,.9)]:[]),...m];
+  }
+  function routeTo(k,dest){
+    const P=pos(k),r=toFar(P),fromBath=P.x<-14.5&&P.z>-.5,toBath=dest.z>-.5;
+    if(fromBath&&!toBath)r.push(V(-15.7,.4),V(-15.7,-1.3));
+    if(!fromBath&&toBath)r.push(V(-15.7,-1.3),V(-15.7,.4));
+    r.push(dest);return r;
+  }
+  function routeBack(k){
+    const P=pos(k),r=[];
+    if(P.x<-14.5&&P.z>-.5)r.push(V(-15.7,.4),V(-15.7,-1.3));
+    if(P.x<-14.5)r.push(V(-15.0,-2.7),V(-13.4,-2.7),V(-12.5,-2.0),V(-12.5,-1.2));
+    r.push(V(-9.5,-1.2),V(-8.2,-1.2),V(-7.6,-1.9),V(-6.3,-1.9),V(-5.5,-.4),V(-3.2,1.0));
+    return r;
+  }
+  function begin(k,mode){
+    if(!ready(k))return false;
+    const p=getP(k),dest=mode==='rest'?PBED[k]:PTUB[k];
+    const C={key:k,mode,phase:'go',route:routeTo(k,dest),i:0,dest,t:0,stk:0,lastD:1e9};
+    CARE[k]=C;
+    if(k==='dog'){dog.forced='care'}
+    if(k==='parrot'){const q=p.group.position;p.pc={x:q.x,y:q.y,z:q.z,yaw:0};p.care={fly:true}}
+    else if(p)p.care={tx:C.route[0].x,tz:C.route[0].z,at:false,face:0};
+    return true;
+  }
+  function release(k){
+    const C=CARE[k];if(!C)return;delete CARE[k];
+    if(k==='dog'){dog.forced=null;dogG.rotation.z=0}
+    else if(k==='panda'){window.pandaCare=null;PANDA.pivot.rotation.z=0}
+    else{const p=getP(k);if(p){p.care=null;p.pc=null;p.pivot.scale.y=1;p.pivot.rotation.z=0}}
+  }
+  function sendBack(k){const C=CARE[k];if(!C)return;C.phase='back';C.mode='back';C.route=routeBack(k);C.i=0;C.stk=0;C.lastD=1e9}
+  // 對外
+  window.petRestAll=function(){
+    if(parkMode||marketMode||sportMode)return;
+    if(inter)endInter();
+    if(BATH){cancelBath()}
+    const ks=['dog','panda','tiger','poodle','parrot'].filter(k=>begin(k,'rest'));
+    if(ks.length){ksay('大家都累了，回自己的床上睡覺吧。',3.5);setTimeout(()=>say('乖，今天玩累了，讓牠們好好睡。',4.5),1800)}
+  };
+  window.petWakeAll=function(){
+    let n=0;Object.keys(CARE).forEach(k=>{if(CARE[k].mode==='rest'){sendBack(k);n++}});
+    if(n)ksay('起床囉，我們去玩！',3);
+  };
+  window.petBath=function(k){
+    if(parkMode||marketMode||sportMode)return;
+    if(!ready(k)){ksay('牠還沒準備好，等一下。',2.5);return}
+    if(BATH)cancelBath();
+    if(CARE[k])release(k);
+    if(!begin(k,'bath'))return;
+    BATH={key:k,stage:'go',t:0,prog:0};
+    kidGoSolo('petbath');
+    ksay('來，'+PNAME[k]+'，我們去洗香香。',3);
+  };
+  function cancelBath(){
+    const k=BATH&&BATH.key;BATH=null;
+    if(k&&CARE[k])sendBack(k);
+    if(kid.phase==='solo'&&kid.solo&&kid.solo.name==='petbath'){kid.solo=null;kid.phase='free';kid.name=''}
+  }
+  function finishBath(){
+    if(!BATH)return;const k=BATH.key;
+    if(BATH.stage==='wash'||BATH.stage==='go'&&CARE[k]&&CARE[k].phase==='at'){BATH.stage='shake';BATH.t=0}
+    else{BATH=null;sendBack(k)}
+  }
+  const _es0=endSolo;
+  endSolo=function(){const n=kid.solo&&kid.solo.name;_es0();if(n==='petbath')finishBath()};
+  const _oss0=onSoloStart;
+  onSoloStart=function(n){_oss0(n);if(n==='petbath'&&BATH){BATH.stage=BATH.stage==='go'?'wash':BATH.stage;ksay('別動喔，泡泡來囉。',2.6)}};
+  const _ksp1=kidSoloPose;
+  kidSoloPose=function(T,t){
+    _ksp1(T,t);
+    if(kid.phase==='solo'&&kid.solo&&kid.solo.name==='petbath'){const s=Math.sin(t*7);T.lean=[.5,0];T.lT=[-.45,0];T.rT=[-.45,0];T.hd=[.25,0];T.lA=[-1.0+.12*s,.1];T.rA=[-1.0-.12*s,-.1];T.lF=[-.7,0];T.rF=[-.7,0]}
+  };
+  // 糖糖的行為
+  window.dogCareStep=function(dt){
+    const C=CARE.dog;if(!C){dog.forced=null;return {still:true,arrived:false}}
+    if(C.phase==='at')return {still:true,arrived:true};
+    const wp=C.route[C.i];if(!wp)return {still:true,arrived:false};
+    dogStep(wp.x,wp.z,C.phase==='back'?2.4:2.2,dt);return {still:false,arrived:false};
+  };
+  window.dogCareRest=()=>!!(CARE.dog&&CARE.dog.phase==='at'&&CARE.dog.mode==='rest');
+  // 玄鳳：用飛的
+  window.parrotCare=function(p,dt,t){
+    const C=CARE.parrot,pc=p.pc;if(!C||!pc){p.care=null;return}
+    let tx,tz,ty;
+    if(C.phase==='at'){tx=C.dest.x;tz=C.dest.z;ty=C.mode==='rest'?1.35:.8}
+    else{const wp=C.route[C.i]||C.dest;tx=wp.x;tz=wp.z;ty=1.5}
+    const dx=tx-pc.x,dz=tz-pc.z,dy=ty-pc.y,d=Math.hypot(dx,dz,dy);
+    if(d>.03){const s=Math.min(d,3.4*dt);pc.x+=dx/d*s;pc.y+=dy/d*s;pc.z+=dz/d*s;if(Math.hypot(dx,dz)>.1)pc.yaw=Math.atan2(dx,dz)}
+    const flying=d>.2;
+    p.group.position.set(pc.x,pc.y,pc.z);p.pivot.rotation.y=pc.yaw+(flying?0:0);
+    if(p.model)p.model.rotation.x=flying?Math.sin(t*16)*.3:Math.sin(t*3)*.04;
+  };
+  // Zzz 與泡泡
+  const zz={};['dog','panda','tiger','poodle','parrot'].forEach(k=>{zz[k]=makeZzz()});
+  const foam=[];for(let i=0;i<9;i++){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:whiteGlow,transparent:true,depthWrite:false,opacity:0}));s.scale.set(.3,.3,1);scene.add(s);foam.push(s)}
+  const rain=[];for(let i=0;i<14;i++){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:blueGlow,transparent:true,depthWrite:false,opacity:0}));s.scale.set(.07,.17,1);s.userData.p=i/14;s.userData.dx=Math.random()-.5;s.userData.dz=Math.random()-.5;scene.add(s);rain.push(s)}
+  const SH=new THREE.Vector3(-18.8,1.8,.1);
+  function careTick(dt,t){
+    // 移動與抵達
+    Object.keys(CARE).forEach(k=>{
+      const C=CARE[k],P=pos(k);if(!P){delete CARE[k];return}
+      C.t+=dt;
+      if(C.phase==='go'||C.phase==='back'){
+        const wp=C.route[C.i];
+        if(!wp){
+          if(C.phase==='back'){release(k);if(BATH&&BATH.key===k)BATH=null;return}
+          C.phase='at';C.t=0;
+          if(k==='panda')window.pandaCare={x:C.dest.x,z:C.dest.z,face:0,sit:C.mode==='rest'?'ground':null,mode:'idle'};
+          else if(k!=='dog'&&k!=='parrot'){const p=getP(k);p.care={tx:C.dest.x,tz:C.dest.z,at:true,face:0}}
+        }else{
+          const d=Math.hypot(wp.x-P.x,wp.z-P.z);
+          if(k==='panda')window.pandaCare={x:wp.x,z:wp.z,face:Math.atan2(wp.x-P.x,wp.z-P.z),sit:null,mode:'idle'};
+          else if(k!=='dog'&&k!=='parrot'){const p=getP(k);p.care={tx:wp.x,tz:wp.z,at:false,face:0}}
+          if(d<.4){C.i++;C.stk=0;C.lastD=1e9}
+          else{if(d<C.lastD-.04){C.lastD=d;C.stk=0}else{C.stk+=dt;if(C.stk>5){setPos(k,wp.x,wp.z);C.stk=0}}}
+        }
+      }else if(C.phase==='at'&&C.mode==='rest'&&C.t>110){sendBack(k)}
+    });
+    // 洗澡進度
+    if(BATH){
+      const k=BATH.key,C=CARE[k];
+      if(!C){BATH=null}
+      else if(BATH.stage==='wash'&&C.phase==='at'){BATH.t+=dt;BATH.prog=Math.min(1,BATH.t/11);
+        if(BATH.t>5.5&&!BATH.m1){BATH.m1=1;const L={dog:'汪汪～好舒服！',panda:'嗯嗯～（咕嚕咕嚕）',tiger:'嗷嗚～（甩水）',poodle:'汪！泡泡好多！',parrot:'你好！你好！洗澡澡！'};dsay(L[k],2.4);if(k==='dog')dogBark();setTimeout(()=>ksay('洗乾淨一點，頭也要洗喔。',3),700)}}
+      else if(BATH.stage==='shake'){BATH.t+=dt;if(BATH.t>1.8){const k2=k;for(let i=0;i<5;i++)setTimeout(()=>{const q=pos(k2);if(q)spawnHeart(q.x,PHT[k2]+.3,q.z)},i*200);ksay(PNAME[k2]+'洗得香香的，真乖。',3.5);setTimeout(()=>say('洗乾淨了就帶牠去擦乾，別讓牠著涼。',4.5),1200);BATH=null;sendBack(k2)}}
+    }
+    // 視覺：Zzz
+    Object.keys(zz).forEach(k=>{const C=CARE[k],s=zz[k],P=C&&pos(k);
+      const on=C&&C.phase==='at'&&C.mode==='rest';
+      s.material.opacity+=((on?.85:0)-s.material.opacity)*Math.min(1,dt*4);
+      if(P)s.position.set(P.x+.1,PHT[k]+.35+.12*Math.sin(t*1.4),P.z)});
+    ['tiger','poodle'].forEach(k=>{const p=getP(k);if(!p||!p.pivot)return;const C=CARE[k],rest=C&&C.phase==='at'&&C.mode==='rest';
+      const tgt=rest?.72:1;p.pivot.scale.y+=(tgt-p.pivot.scale.y)*Math.min(1,dt*3)});
+    if(CARE.dog)dogG.rotation.z=(BATH&&BATH.key==='dog'&&BATH.stage==='shake')?Math.sin(t*40)*.18:0;
+    // 視覺：泡泡與水
+    const washing=BATH&&(BATH.stage==='wash'&&CARE[BATH.key]&&CARE[BATH.key].phase==='at');
+    const shaking=BATH&&BATH.stage==='shake';
+    const bk=BATH&&BATH.key,P=bk&&pos(bk);
+    const ph=bk?PHT[bk]:1;
+    foam.forEach((s,i)=>{let op=0;
+      if(P&&(washing||shaking)){const pr=washing?BATH.prog:1,a=i/foam.length*6.283+t*.3;
+        s.position.set(P.x+Math.cos(a)*.18*ph,.15+ph*(.25+.5*((i*37)%9)/9),P.z+Math.sin(a)*.14*ph);s.scale.setScalar(.12+.3*pr*ph);op=.85*Math.min(1,pr*2.5)*(shaking?Math.max(0,1-BATH.t/1.8):1)}
+      s.material.opacity=op});
+    rain.forEach(s=>{const u=s.userData;u.p=(u.p+dt*1.7)%1;let op=0;
+      if(P&&washing&&BATH.prog<.92){const p=u.p;s.position.set(SH.x+(P.x-SH.x)*p+u.dx*.12,SH.y+(PHT[bk]*.8+.2-SH.y)*p,SH.z+(P.z-SH.z)*p+u.dz*.12);op=.75*(1-p*.4)}
+      s.material.opacity=op});
+    if(BATH&&BATH.stage==='shake'&&bk&&bk!=='dog'){
+      const sh=Math.sin(t*38)*.16;
+      if(bk==='panda')PANDA.pivot.rotation.z=sh;else{const p=getP(bk);if(p)p.pivot.rotation.z=sh}}
+    else{if(PANDA.pivot.rotation.z!==0&&!(BATH&&BATH.key==='panda'))PANDA.pivot.rotation.z=0;['tiger','poodle','parrot'].forEach(k=>{const p=getP(k);if(p&&p.pivot&&p.pivot.rotation.z!==0&&!(BATH&&BATH.key===k))p.pivot.rotation.z=0})}
+  }
+  let cAct=0,cRet=0;
+  function careCam(dt){
+    const rest=Object.values(CARE).some(c=>c.mode==='rest'&&c.phase==='go'),on=!!BATH||rest;
+    if(on&&!parkMode&&!sportMode&&!marketMode){cAct=1;const tx=BATH?-18.2:-17.5,tz=BATH?1.0:-2.4,k=Math.min(1,dt*1.8);
+      lookAt.x+=(tx-lookAt.x)*k;lookAt.z+=(tz-lookAt.z)*k;const td=BATH?7.5:11;if(tDist>td)tDist+=(td-tDist)*k;if(tEl<1.0)tEl+=(1.0-tEl)*k}
+    else if(cAct===1){cAct=2;cRet=0}
+    if(cAct===2){cRet+=dt;const k=Math.min(1,dt*1.4);lookAt.x+=(-3-lookAt.x)*k;lookAt.z+=(1.3-lookAt.z)*k;tEl+=(.5-tEl)*k;if(tDist<19)tDist+=(21-tDist)*k;if(cRet>2.5)cAct=0}
+  }
+  const _hf1=helpFx;
+  helpFx=function(dt,t){_hf1(dt,t);careTick(dt,t);careCam(dt)};
+  // 按鈕
+  document.querySelectorAll('[data-care]').forEach(b=>{
+    const [a,k]=b.dataset.care.split('-');
+    if(a==='bath')b.textContent='幫'+PNAME[k]+'洗澡';
+    b.onclick=()=>{if(a==='bath')petBath(k);else if(a==='rest')petRestAll();else if(a==='wake')petWakeAll()};
+  });
+})();
+
+// ---------- 效能：小東西不投影，減少繪製負擔 ----------
+(function(){if(LOWQ)return;let n=0;scene.children.forEach(m=>{const p=m.isMesh&&m.geometry&&m.geometry.parameters;if(!p||p.width===undefined||p.depth===undefined)return;
+  if(Math.max(p.width,p.height,p.depth)<.9&&!m.material.transparent){m.castShadow=false;m.receiveShadow=false;n++}})})();
 // ---------- 日夜 ----------
 const KEYS=[
   {h:0,  bg:0x0a0e24,sun:0x7f95ff,si:.22,hi:.30,hc:0x8fa0d8,lamp:1},
@@ -3300,8 +3574,8 @@ function updateFx(dt,t){
   const v=new THREE.Vector3(mom.position.x,2.05-.31*sitW,mom.position.z).project(camera);
   $('bubble').style.left=((v.x+1)/2*innerWidth)+'px';$('bubble').style.top=((1-v.y)/2*innerHeight-6)+'px';
 }
-let az=0,el=.5,dist=17,tAz=0,tEl=.5,tDist=17,drag=false,lx=0,ly=0;
-const lookAt=new THREE.Vector3(.3,.9,1.3);
+let az=0,el=.5,dist=21,tAz=0,tEl=.5,tDist=21,drag=false,lx=0,ly=0;
+const lookAt=new THREE.Vector3(-3,.9,1.3);
 let downX=0,downY=0;
 renderer.domElement.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;downX=e.clientX;downY=e.clientY});
 addEventListener('pointerup',e=>{drag=false;if(e.target===renderer.domElement&&Math.hypot(e.clientX-downX,e.clientY-downY)<6)floorClick(e)});
