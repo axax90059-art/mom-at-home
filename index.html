@@ -2938,6 +2938,70 @@ function petActTick(dt){
 }
 document.querySelectorAll('[data-pet]').forEach(b=>b.onclick=()=>petActStart(b.dataset.pet));
 
+
+// ---------- 選單整理：把一大排按鈕收成五個分頁，一次只看一類 ----------
+(function(){
+  const bar=document.getElementById('bar');if(!bar)return;
+  const rows=[...bar.querySelectorAll('.row')];
+  const findRow=k=>rows.find(r=>{const l=r.querySelector('.lab');return l&&l.textContent.includes(k)});
+  const rWant=findRow('我想'),rGo=findRow('節日'),rDo=findRow('媽媽在');
+  if(!rWant||!rGo||!rDo)return;
+  const st=document.createElement('style');
+  st.textContent=`
+  #tabRow{gap:8px;flex-wrap:nowrap;overflow-x:auto;justify-content:center}
+  .tab{white-space:nowrap;padding:9px 16px;font-size:15px;border-radius:22px;border:1px solid rgba(255,230,180,.55);background:rgba(50,34,66,.78);color:#ffe9c8;cursor:pointer;backdrop-filter:blur(4px)}
+  .tab.on{background:rgba(255,200,130,.38);border-color:#ffd88a;color:#fff}
+  .tab:hover{background:rgba(255,200,130,.28)}
+  .panel{display:none;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;max-width:980px}
+  .panel.on{display:flex}
+  .panel h4{width:100%;margin:2px 0 0;font-size:12px;font-weight:400;opacity:.7;text-align:center;letter-spacing:.14em;text-shadow:0 1px 4px #000;color:#fff}
+  @media (max-width:560px){.tab{padding:8px 11px;font-size:14px}}`;
+  document.head.appendChild(st);
+  const tabRow=document.createElement('div');tabRow.className='row';tabRow.id='tabRow';
+  const panelRow=document.createElement('div');panelRow.className='row';panelRow.id='panelRow';
+  const defs=[
+    {k:'mom',  t:'💕 跟媽媽', parts:[['陪媽媽',()=>[...rWant.querySelectorAll('.in')]],['一起做事',()=>[...rWant.querySelectorAll('[data-f=dish],[data-f=water2]')]],['我自己',()=>[...rWant.querySelectorAll('[data-k=bath],[data-k=sleep]')]]]},
+    {k:'pet',  t:'🐾 動物', parts:[['糖糖',()=>[...rWant.querySelectorAll('[data-k=pet],[data-k=feed],[data-f=dogplay]')]],['寵物',()=>[...rWant.querySelectorAll('[data-pet]')]]]},
+    {k:'fam',  t:'👪 家人', parts:[['爸爸媽媽',()=>[...rWant.querySelectorAll('[data-f=holdhands]')]],['一起玩',()=>[...rWant.querySelectorAll('[data-p2]')]],['換人操控',()=>[...rWant.querySelectorAll('[data-play]')]]]},
+    {k:'go',   t:'🚪 出門去', parts:[['全部',()=>[...rGo.querySelectorAll('button')]]]},
+    {k:'doing',t:'🍳 媽媽在做', parts:[['全部',()=>[...rDo.querySelectorAll('button')]]]},
+  ];
+  const panels={},tabs={};
+  defs.forEach(d=>{
+    const tb=document.createElement('button');tb.className='tab';tb.textContent=d.t;tb.type='button';tabRow.appendChild(tb);tabs[d.k]=tb;
+    const p=document.createElement('div');p.className='panel';
+    d.parts.forEach(([title,fn])=>{const btns=fn();if(!btns.length)return;btns.forEach(b=>p.appendChild(b))});
+    panelRow.appendChild(p);panels[d.k]=p;
+    tb.onclick=()=>{const was=tb.classList.contains('on');Object.values(tabs).forEach(x=>x.classList.remove('on'));Object.values(panels).forEach(x=>x.classList.remove('on'));if(!was){tb.classList.add('on');p.classList.add('on')}};
+  });
+  rWant.style.display='none';rGo.style.display='none';rDo.style.display='none';
+  bar.insertBefore(panelRow,bar.firstChild);bar.insertBefore(tabRow,bar.firstChild);
+  // 預設展開第一個分頁；手機／平板預設收起
+  if(!LOWQ){tabs.mom.classList.add('on');panels.mom.classList.add('on')}
+  // 按下按鈕後，如果是外出場景就自動回到分頁列
+})();
+
+
+// ---------- 順暢：自動調整畫質、手機雙指縮放 ----------
+(function(){
+  if(typeof LOWQ!=='undefined'&&LOWQ)return;
+  let frames=0,last=performance.now(),level=0,low=0;
+  function degrade(l){
+    if(l===1){renderer.setPixelRatio(Math.min(devicePixelRatio,1.25))}
+    else if(l===2){renderer.setPixelRatio(1);sun.shadow.mapSize.set(2048,2048);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}}
+    else if(l===3){renderer.setPixelRatio(.85);sun.shadow.mapSize.set(1024,1024);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}}
+    renderer.setSize(innerWidth,innerHeight)}
+  (function tick(){requestAnimationFrame(tick);frames++;const n=performance.now();
+    if(n-last>=3000){const fps=frames*1000/(n-last);frames=0;last=n;if(document.hidden)return;
+      if(fps<34){low++;if(low>=2&&level<3){level++;low=0;degrade(level)}}else low=0}})();
+})();
+(function(){
+  let d0=0;
+  addEventListener('touchstart',e=>{if(e.touches.length===2)d0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)},{passive:true});
+  addEventListener('touchmove',e=>{if(e.touches.length===2&&d0){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);tDist=Math.max(2.4,Math.min(22,tDist-(d-d0)*.03));d0=d}},{passive:true});
+  addEventListener('touchend',()=>{d0=0},{passive:true});
+})();
+
 // ---------- 日夜 ----------
 const KEYS=[
   {h:0,  bg:0x0a0e24,sun:0x7f95ff,si:.22,hi:.30,hc:0x8fa0d8,lamp:1},
@@ -2995,10 +3059,10 @@ const lookAt=new THREE.Vector3(0,.9,-.3);
 let downX=0,downY=0;
 renderer.domElement.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;downX=e.clientX;downY=e.clientY});
 addEventListener('pointerup',e=>{drag=false;if(e.target===renderer.domElement&&Math.hypot(e.clientX-downX,e.clientY-downY)<6)floorClick(e)});
-addEventListener('pointermove',e=>{if(!drag)return;tAz=Math.max(-.9,Math.min(.9,tAz-(e.clientX-lx)*.005));tEl=Math.max(.18,Math.min(1.1,tEl+(e.clientY-ly)*.004));lx=e.clientX;ly=e.clientY});
-addEventListener('wheel',e=>{tDist=Math.max(6,Math.min(22,tDist+e.deltaY*.01))},{passive:true});
+addEventListener('pointermove',e=>{if(!drag)return;tAz=Math.max(-1.8,Math.min(1.8,tAz-(e.clientX-lx)*.005));tEl=Math.max(.05,Math.min(1.25,tEl+(e.clientY-ly)*.004));lx=e.clientX;ly=e.clientY});
+addEventListener('wheel',e=>{tDist=Math.max(2.4,Math.min(22,tDist+e.deltaY*.01))},{passive:true});
 function updateCam(dt){const k=Math.min(1,dt*5);
-  if(!camManual&&started){if(parkMode||marketMode||sportMode){lookAt.x+=((mom.position.x+kid.x)/2-lookAt.x)*Math.min(1,dt*2.2);lookAt.z+=((mom.position.z+kid.z)/2-lookAt.z)*Math.min(1,dt*2.2)}else{const fx=Math.max(-.5,Math.min(7.6,(mom.position.x+kid.x)/2));lookAt.x+=(fx-lookAt.x)*Math.min(1,dt*2.2);lookAt.z+=(-.3-lookAt.z)*Math.min(1,dt*2)}}az+=(tAz-az)*k;el+=(tEl-el)*k;dist+=(tDist-dist)*k;
+  if(!camManual&&started){if(parkMode||marketMode||sportMode){const zf=Math.max(0,Math.min(1,(12-tDist)/7)),mx=(mom.position.x+kid.x)/2,mz=(mom.position.z+kid.z)/2;lookAt.x+=((mx+(kid.x-mx)*zf*.7)-lookAt.x)*Math.min(1,dt*3.5);lookAt.z+=((mz+(kid.z-mz)*zf*.7)-lookAt.z)*Math.min(1,dt*3.5)}else{const zf=Math.max(0,Math.min(1,(12-tDist)/7)),mx=(mom.position.x+kid.x)/2,mz=(mom.position.z+kid.z)/2,px=mx+(kid.x-mx)*zf*.7,pz=mz+(kid.z-mz)*zf*.7;const fx=zf>0?Math.max(-6.5,Math.min(13,px)):Math.max(-.5,Math.min(7.6,mx)),fz=-.3+zf*(pz+.3);lookAt.x+=(fx-lookAt.x)*Math.min(1,dt*3.5);lookAt.z+=(fz-lookAt.z)*Math.min(1,dt*3.5)}}az+=(tAz-az)*k;el+=(tEl-el)*k;dist+=(tDist-dist)*k;
   const asp=innerWidth/innerHeight,d=dist*(asp<1?1.0+(1-asp)*.9:1);
   camera.position.set(lookAt.x+Math.sin(az)*Math.cos(el)*d,lookAt.y+Math.sin(el)*d,lookAt.z+Math.cos(az)*Math.cos(el)*d);camera.lookAt(lookAt)}
 
